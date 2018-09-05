@@ -1,1 +1,306 @@
+GCP Next 17
+***********
 
+API Server:
+-----------
+Kubernetes is a very API-centric system - everything communicates through API
+> No Private APIs
+> No "System Only" calls
+
+REST: Defined in terms of "resources" (nouns, aka "objects") and methods (verbs)
+
+
+PODs:
+-----
+A small group of tightly coupled containers & volumes, composed together
+The atom of Kubernetes
+Shared lifecycle and fate
+Shared networking - a shared "real" IP, containers see each other as localhost
+
+
+Controller:
+-----------
+A piece of code that watches the Kubernetes API and reacts
+The defining pattern of Kubernetes, used everywhere
+Self-healing, aka rectification
+Example: ReplicaSet, Services, DNS, Kubelet
+
+
+Labels:
+-------
+Metadata (key-value) which can be attached to any API resource
+
+Labels: identification
+> Allow users to define how to group resources
+> Examples: app name, tier (frontend/backend), stage (dev/test/prod)
+
+Annotations: data that "rides along" with objects
+> Third-party or internal state that isn't part of an object's schema
+
+
+Selectors:
+----------
+Expresses which objects to act upon
+> Think "select ... where"
+
+Provides very loose coupling
+Users can manage groups however they need
+Examples: services, deployments
+
+
+The IP-per-pod model
+--------------------
+Every pod has a real IP address
+This is different from the out-of-the-box model Docker offers
+> No machine-private IPs
+> No port-mapping
+
+Pod IPs are accessible from other Pods, regardless of which VM they are on
+Linux "network namespaces" (aka "netns") and Virtual interfaces
+
+
+Flat network space:
+-------------------
+Pods must be reachable accross VMs too
+
+Kubernetes doesn't care HOW, but this is required
+> L2, L3, or overlay
+
+Assign a CIDR (IP block) to each VM
+GCP: Teach the network how to route packets
+
+
+Programming GCP's network:
+--------------------------
+GKE automatically sets up routing for you using every trick it needs
+
+All VMs are created as "routers"
+> --can-ip-forward
+> Disable anti-spoof protection for this VM
+
+Add one GCP static route for each VM
+> gcloud compute routes create vm2 --destination-range=x.y.z.0/24 --next-hop-instance=vm2
+
+The GCP network does the rest
+
+Dealing with change:
+--------------------
+You need something more durable than a pod IP
+
+A real cluster changes over time:
+> Scale-up and scale-down events
+> Rolling updates
+> Pods crash or hang
+> VMs reboot
+
+The Pod addresses you want to talk to can change without warning
+
+
+The Service abstraction:
+------------------------
+A service is a group of endpoints (usually pods)
+Service provides a stable VIP
+
+VIP automatically routes to backend pods
+> Implementations can vary
+> We will examin the default implementation
+
+The set of pods "behind" a service can change
+
+Clients only need the VIP, which doesn't change
+
+
+Service:
+--------
+What you submit is simple
+> other fields will be defaulted or assigned
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: store-be
+spec:
+  selector:
+    app: store
+    role: be
+  ports:
+  - name: http
+    port: 80
+
+
+Service:
+--------
+What you get back has more information
+Automatically creates a distributed load balancer
+
+The default is to allocate an in-cluster IP for your service "ClusterIP"
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: store-be
+  namespace: default
+  creationTimestamp: 2018-05-06T19:16:56Z
+  resourceVersion: "7"
+  selfLink: /api/v1/namespaces/default/services/store-be
+  uid: 196d5751-13bf-11e6-9353-42010a800fe3
+Spec:
+  type: ClusterIP
+  selector:
+    app: store
+    role: be
+  clusterIP: 10.9.3.76
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 80
+  sessionAffinity: None
+
+
+Endpoints:
+----------
+When you create a service, a controller wakes up
+
+Holds the IPs of the pod backends
+
+kind: Endpoints
+apiVersion: v1
+metadata:
+  name: store-be
+  namespace: default
+subsets:
+- addresses:
+  - ip: 10.11.8.67
+  - ip: 10.11.5.3
+  - ip: 10.11.0.9
+  ports:
+  - name: http
+    port: 80
+    protocol: TCP
+
+
+Conntrack:
+----------
+Linux kernel connection-tracking
+
+Remembers address translations
+> Based on the 5-tuple IP header 
+
+Does a lot more, but not very relevant here
+
+Reversed on the return path
+
+{
+  protocol = TCP
+  src_ip = pod1
+  src_port = 1234
+  dst_ip = svc1
+  dst_port = 80
+} => {
+  protocol = TCP
+  src_ip = pod1
+  src_port = 1234
+  dst_ip = pod99
+  dst_port = 80
+}
+
+
+A bit more on iptables:
+-----------------------
+The iptable rules look scary, but are actually simple:
+
+if dest.ip == svc1.ip && dest.port == svc1.port {
+  pick one of the backends at random
+  rewrite destination IP
+}
+
+Configured by 'kube-proxy' - a pod running on each VM
+> Not actually a proxy
+> Not in the data path
+
+kube-proxy is a controller - it watches the API for services
+
+
+DNS:
+----
+Even easier: services are addes to an in-cluster DNS server
+
+You would never hardcode an IP, but you might hardcode a hostname and port
+Serves "A" and "SRV" records
+DNS itself runs as pods and a service
+
+
+DNS Service:
+------------
+Requests a particular Cluster IP
+
+Pods are auto-scaled with the cluster size
+
+Service VIP is stable
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: kube-dns
+  namespace: kube-system
+spec:
+  clusterIP: 10.0.0.10
+  selector:
+    k8s-app: kube-dns
+  ports:
+  - name: dns
+    port: 53
+    protocol: UDP
+  - name: dns-tcp
+    port: 53
+    protocol: TCP
+
+
+Services: Simple and Powerful:
+------------------------------
+Can use any port you want, no conflicts
+Can request a particular 'clusterIP'
+Can remap port
+
+Services are AN ABSTRACTION - the API is a VIP
+NO RUNNING PROCESS or intercepting the data-path
+All a client needs to do is hit the service IP:port
+
+
+Sending external traffic:
+-------------------------
+Services are within a cluster
+What happens if you want your pod to reach google.com?
+
+
+Leaving the GCP project:
+------------------------
+VMs get private IPs (in 10.0.0.0/8)
+VMs can have public IPs too
+GCP: Public IPs are provided by 1-to-1 NAT
+
+1-to-1 NAT inside GCP only understands VM IPs
+> Anything else gets dropped
+
+Pod IPs != VM IPs
+
+When is doubt, add some more iptables
+> MASQUERADE, aka SNAT
+
+Applies to any packet with a destination *outside* of 10.0.0.0/8
+
+
+Receiving external traffic:
+---------------------------
+GCP offers multiple products here
+
+Kubernetes builds on two:
+> Network Load Balancer (L4)
+> HTTP/S Load Balancer (L7)
+
+These map to Kubernetes APIs:
+> Service type=LoadBalancer
+> Ingress
+
+26:30
