@@ -1,0 +1,495 @@
+Introduction to Docker and the DCA Certification
+
+Containers are like Jars ;)
+Docker runtime + Container ~= Java Runtime + Jar
+
+$ sudo docker run hello-world
+Command for testing docker installations...
+
+Create a docker group
+$ sudo groupadd docker
+
+Add user to docker group
+$ sudo usermod -a -G docker <user-name>
+
+Now we can run docker commands without sudo
+$ docker version
+
+Dockerfile:
+
+FROM Ubuntu:latest
+LABEL maintainer="sujai.prakasam@email.com"
+RUN apt-get update && apt-get install redis_server
+EXPOSE 6379
+ENTRYPOINT ["/usr/bin/redis_server"]
+
+docker create + docker start = docker run
+
+.dockerignore has to be in the root directory of our Dockerfiles context
+
+.dockerignore 
+
+# comment
+*/temp*
+*/*/temp*
+temp?
+*.md
+!README.md
+
+Matching is done using Go filepath.Match rules
+
+Parser Directive: (escape)
+The 'escape' directive sets the character used to escape characters and new lines in a Dockerfile.
+If 'escape' directive is not specified, then the default escape character is \
+
+# escape=` (backtick)
+
+
+Our First Dockerfile
+
+FROM Ubuntu
+LABEL maintainer="sujai.prakasam@email.com"
+ADD https://drive.google.com/file/d1ydscfgre3z765df3r/view?usp=sharing /tmp/hello.txt
+CMD ["bash"]
+
+$ docker build -f dockerfile -t my-ubuntu:beta .
+
+$ docker images
+
+$ docker run -it -d --name ubuntu my-ubuntu:beta
+
+$ docker ps -a
+
+$ docker attach ubuntu
+Command to attach our local stdin, stdout, and stderr to the container
+In this case we will connect to the bash shell of our container as we specified bash as CMD in our Dockerfile
+
+# cd tmp
+# ls
+hello.txt
+
+ARG, RUN, ENV, WORKDIR:
+
+#Dockerfile
+ARG CODE_VERSION=14.04
+FROM ubuntu:${CODE_VERSION}
+LABEL maintainer="sujai.prakasam@email.com"
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+ENV HOME /root
+WORKDIR /root
+CMD ["bash"]
+
+$ docker build --no-cache -f Dockerfile -t my-ubuntu-2 .
+
+$ docker images
+
+$ docker run -it -d --name test-ubuntu my-ubuntu-2
+
+$ docker ps
+
+The ENTRYPOINT Instruction:
+
+#Dockerfile
+FROM ubuntu:trusty
+ENTRYPOINT ["/bin/ping","-c","3"]
+CMD ["192.168.99.100"]
+# We can override ENTRYPOINT and CMD from command line when using docker run
+
+$ docker build -f Dockerfile -t test-image .
+
+$ docker ps
+
+$ docker run -it --name test-container test-image
+This command pings 192.168.99.100 three times
+
+$ docker run -it --name test-container test-image 192.168.98.99
+Here we are overriding the CMD specified in Dockerfile 
+
+$ docker ps -a
+
+ONBUILD Instruction
+For reusing any instruction from a dockerfile for next build
+i.e. executed at a later time when the image is used as the base for another build.
+
+[...]
+ONBUILD ADD . /app/src
+ONBUILD RUN /usr/local/bin/python-build --dir /app/src
+[...]
+
+STOPSIGNAL Instruction
+Sets a system call that will be sent to container to exit from its current state
+
+STOPSIGNAL signal
+
+signal can be a valid unsigned number that matches a position in the kernel’s syscall table, for instance 9
+or a signal name in the format SIGNAME, for instance SIGKILL
+
+https://docs.docker.com/engine/reference/builder/
+
+Tag, push, and pull images
+
+$ docker run -it -d --name test-busybox busybox
+
+$ docker ps -a
+Among other thins, this command also lists the container ID
+
+$ docker container commit 5d1b789cdf86 test-busybox
+
+$ docker images
+
+$ docker tag test-busybox sujaip/test-busybox
+
+docker tag <image-name> <dockerID>/<repository-name>
+  
+$ docker images
+
+$ docker login
+...
+Username:
+Password:
+
+$ docker push sujaip/test-busybox
+
+docker push <dockerID>/<repository-name>
+
+$ docker pull sujaip/test-busybox
+
+TAR file:
+How to save our docker image in to a .tar file
+
+$ docker save busybox > busybox.tar
+
+$ docker load < busybox.tar
+
+$ docker images
+
+Search Docker Images:
+
+$ docker search httpd
+This command searches docker hub for images with httpd in their name
+
+$ docker search --filter is-automated=true httpd
+
+$ docker search --filter is-official=true --filter stars=3 httpd
+
+$ docker search --format "table {{.Name}}\t{{.Starcount}}" httpd
+
+Docker Inspect:
+
+$ docker inspect ubuntu:16.04
+
+Pruning unused/dangling images:
+
+$ docker image prune
+Command to prue dangling images
+
+$ docker image prune --all
+Command to prune dangling and unused images
+
+$ docker image prune --all --force --filter "until=200h"
+Command to prune dangling unused images created before 200 hours
+
+Deleting Docker Images:
+
+$ docker image rm busybox
+Removes the tags associated with the image and deletes the image
+
+$ docker rmi busybox
+Another command to delete images
+
+$ docker image rm busybox redis
+deleting multiple images
+
+Creat, Start, Stop, and Restart a Container:
+
+$ docker container create --name test-busybox --interactive --tty busybox
+Creates a container (its not running)
+
+$ docker container create --name test-ubuntu -i -t ubuntu
+-i and -t here are shortcuts for --interactive and --tty
+
+$ docker ps -a
+
+$ docker container start test-ubuntu
+
+$ docker ps
+
+$ docker container stop test-ubuntu
+
+$ docker ps -a
+
+$ docker container restart test-ubuntu
+
+$ docker ps -a
+
+Docker Attach:
+Interacting with the shell of a container 
+
+$ docker run -d -i -t --name hidden-ubuntu ubuntu:16:04
+
+$ docker ps -a --format "table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+$ docker attach hidden-ubuntu
+#
+# exit
+
+$ docker ps -a --format "table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Ports}}"
+Container is now in Exited status, this is because exit command terminates the container.
+
+Docker Exec:
+Interacting with the shell of a container without attachig to it.
+
+$ docker start hiddem-ubuntu
+
+$ docker exec -i -t hidden-ubuntu bash
+#
+# exit
+Here we are not using -d which is to detach the command....
+unlike attach command, exec creates a new process instead of attaching to the main process of the container
+
+$ docker ps -a
+hidden-ubuntu container should still be running
+
+Docker Inspect:
+View specific details of a container
+
+$ docker inspect hopeful_wescoff
+
+$ docker inspect --format='{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' hopeful_wescoff tender_nobel
+This command prints the IP addresses of the two containers
+
+Container Logs:
+
+$ docker container logs tender_noble
+
+$ docker container logs --tail=10 tender_noble
+
+Viewing Processes of a running Container:
+
+$ docker container top my-httpd
+
+Remove all stopped Containers:
+
+$ docker container prune
+
+$ docker container prune --force --filter "until=2018-01-04T13:10:00"
+
+$ docker container prune --force --filter "until=5m"
+
+Remove Specific Containers:
+
+$ docker container rm running_container
+Can't remove a running container, use --force option
+
+$ docker container rm running_container --force
+
+$ docker container rm <container_ID_1> <container_ID_2> --force
+
+$ docker rm --force `docker ps -a -q`
+Delete all running and stopped containers
+
+$ docker rm $(docker ps -a -q)
+Delete all stopped containers
+
+$ docker container rm -v stopped_container
+$ docker rm -v stopped_container
+Remove a stopped container along with any volumes associated with it.
+
+Killing Zombie Containers:
+
+Stop vs Kill:
+docker stop command attempts to gracefully shut down the container by sending its main process a SIGTERM signall,
+If the process does not respond, then it send it a SIGKILL signal to forcefully shutdown the process
+
+docker kill command sends SIGKILL signal to the main process of the container straightaway
+
+$ docker container kill some_zombie_container
+
+$ docker container kill stopped_container
+Error: can't kill stopped container...
+
+Rename a Container:
+
+$ docker container rename container_name new_name
+we can use this command to rename both stopped and running containers
+
+Container Diff: Inspect changes to files or directories on a container's filesystem
+
+$ docker container diff running_container
+D /var
+C /root
+A /root/.bash_history
+
+Here A refers to addition of file or directory, D refers to file or directory deleted, and C referes change
+
+Docker Commit:
+$ docker container commit some_container sujaip/new-image:v1
+
+$ docker images
+
+Mapping Container Ports to its Host:
+
+$ docker run -d -i -t --name httpd_1 -p 80:80 httpd
+Here -p<host_port>:<container_port>
+
+$ docker run -d -i -t --name httpd_2 -P httpd
+-P maps the container ports to dynamically allocated host ports
+
+$ docker ps --all --format "table {{.ID}}\t{{.Ports}}"
+$ docker container port container_name
+
+
+NGINX Application:
+
+$ mkdir test-nginx
+$ cd test-nginx
+$ vi index.html
+
+#index.html
+<html>
+<head>
+<style>
+h1 {color:black;text-align:left;font-family:helvetica;font-size:36}
+p {color:black;text-align:left;font-family:helvetica;font-size:18}
+</style>
+</head>
+<body>
+<h1> welcome to nginx service! </h1>
+<p> this is a custom nginx service </p>
+</body>
+<html>
+
+$ vi dockerfile
+
+#dockerfile
+FROM nginx:alpine
+LABEL maintainer="sujai.prakasam@email.com"
+VOLUME ["/vol-nginx"]
+COPY index.html /usr/share/nginx/html
+EXPOSE 80
+
+$ docker build --no-cache -f dockerfile -t my-nginx .
+
+$ docker run -it -d --name nginx -p 8080:80 my-nginx
+-p <host_port>:<container_port>
+
+
+Managing Data in Docker
+https://docs.docker.com/storage/
+
+By default files created inside a container are stored on a writable container layer, and do not persist after the container is stopped.
+Docker has three different ways to store files in the host machine from containers: volumes, bindmounts, and tmpfs mounts.
+
+Volumes:
+When we create a volume, it is stored within a directory on the host machine.
+when we mount the volume in to a container, this directory is what is mounted in to the container.
+Volumes are similar to bindmounts, except that volumes are managed by Docker and are isolated from the core functionality of the host.
+
+Multiple containers can mount the same volume simultaneously, either read-write or read-only.
+
+tmpfs mounts is not persisted to disk, tmpfs mout is only persisted in the host memory.
+when the container stops, the tmpfs mount is removed and files in the mout are not persisted.
+
+$ docker volume create --name test-volume
+
+$ docker volume ls
+
+Start a container with a Volume:
+
+$ docker run -d --name test-busybox -v vol-busybox:/app busybox
+-v <volume_name>:<container-directory>
+
+$ docker volume ls
+
+$ docker inspect test-busybox
+We will find the vol-busybox volume in the Mounts section of the output.
+
+$ docker run -d --name test-busybox-1 --mount source=vol-busybox-1,target=/app busybox
+
+Attach a Read-Only Volume to a Container:
+
+$ docker volume ls
+
+$ docker run -d --name test-busybox -v vol-busybox:/app:ro busybox
+:ro here is to specify that the volume is read-only
+
+$ docker inspect test-busybox
+
+$ docker run -d --name test-busybox-1 --mount source=vol-busybox-1,target=/app,readonly busybox
+
+$ docker volume ls
+$ docker inspect test-busybox-1
+
+$ docker volume inspect vol-busybox
+
+Remove unused volumes:
+
+$ docker volume prune --force
+
+$ docker volume prune -f 
+
+Observing changes to a Volume:
+
+$ docker volume create vol-ubuntu
+
+$ docker volume ls
+
+$ docker run -it -d -v vol-ubuntu:/tmp --name ubuntu-data ubuntu
+
+$ docker ps -a
+
+$ docker attach ubuntu-data
+# echo "This is a data container for Ubuntu" > /tmp/msg.txt
+# cd tmp
+# ls
+msg.txt
+# exit
+
+$ docker-machine ssh default
+$ sudo su -
+# cd /var/lib/docker/volumes
+# ls
+...
+...
+vol-ubuntu
+# cd vol-ubuntu
+# ls
+_data
+# cd _data
+# ls
+msg.txt
+# cat msg.txt
+This is a data container for Ubuntu
+
+Start a container with a bindmount:
+
+$ docker volume ls
+
+$ docker run -d -it --name test-busybox --mount type=bind,source=/tmp,target=/app nginx
+
+$ docker inspect test-busybox
+We can see the type of volume mentioned as bind in Mounts section of the output
+
+$ docker stop test-busybox
+
+$ docker rm test-busybox
+
+$ docker run -d -it --name test-busybox --mount type=bind,source=/tmp,target=/app,readonly nginx
+readonly flag in the --mount indicates that the volume should be bind mounted as read-only inside the container.
+
+$ docker inspect test-busybox
+Here we can see the bind mount volume listed as readolny in the Mounts section of the output
+
+tmpfs Mount:
+
+$ docker run -d -it --name test-busybox --mount type=tmpfs,target=/app busybox
+
+$ docker ps -all
+
+$ docker inspect test-busybox
+Here we can see that tmpfs mount has been created succesfuly from Mounts section of the output
+
+$ docker run -d -it --name test-busybox-1 --tmpfs /app busybox
+another syntax for creating a tmpfs mount
+
+
