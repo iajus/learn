@@ -1,0 +1,556 @@
+K8S Workshop by Viktor Farcic
+Slides: http://vfarcic.github.io/devops23/workshop.html
+
+https://github.com/vfarcic/go-demo-2
+
+Multi Stage Dockerfile:
+-----------------------
+FROM golang:1.9 AS build
+ADD . /src
+WORKDIR /src
+RUN go get -d -v -t
+RUN go test --cover -v ./... --run UnitTest
+RUN go build -v -o go-demo
+
+FROM alpine:3.4
+MAINTAINER 	Viktor Farcic <viktor@farcic.com>
+RUN mkdir /lib64 && ln -s /lib/libc.musl-x86_64.so.1 /lib64/ld-linux-x86-64.so.2
+EXPOSE 8080
+ENV DB db
+CMD ["go-demo"]
+HEALTHCHECK --interval=10s CMD wget -qO- localhost:8080/demo/hello
+COPY --from=build /src/go-demo /usr/local/bin/go-demo
+RUN chmod +x /usr/local/bin/go-demo
+
+Multi Stage Build in Docker:
+----------------------------
+First stage: Build the binary
+Second stage: Copy the binarty from first stage to build the container image
+
+Docker HEALTHCHECK is ignored in Kubernetes
+
+$ docker image build -t go-demo-2 .
+
+$ docker image ls
+
+$ docker login -u DOCKER_HUB_USER
+
+$ docker image tag go-demo-2 DOCKER_HUB_USER/go-demo-2:beta
+
+$ docker image push DOCKER_HUB_USER/go-demo-2:beta
+
+K8S, Docker Swarm, Mesos, Nomad, AWS ECS
+
+$ minikube start --vm-driver virtualbox --cpus 3 --memory 3072
+
+$ eval $(minikube docker-env)
+$ docker container ls
+These commands connect local docker binary to listen to minikube docker daemon
+
+
+$ minikube ssh
+This command is used to ssh in to the server running minikube
+
+$ kubectl config view
+Show merged kubeconfig settings
+
+$ kubectl config view -o jsonpath='{.user[?(@.name == "sujai")].user.password}'
+Get password for user sujai
+
+$ kubectl config current-context
+Display the current context
+
+$ kubectl config use-context my-cluster-name
+Set the default context to my-cluster name
+
+$ kubectl config set-context gce --user=cluster-admin --namespace=foo && kubectl config use-context gce
+Set a context with specific username and namespace
+
+$ kubectl get services --sort-by=.metadata.name
+List Services sorted by name
+
+$ kubectl get pods --sort-by='.status.containerStatuses[0].restartCount'
+List Pods sorted by restart count
+
+$ kubectl get pods --all-namespaces
+List all Pods in all namespaces
+
+$ kubectl get nodes -o jsonpath='{.items[*].status.addresses[?(@.type=="ExternalIP")].address}'
+Get external IPs of all nodes
+
+$ kubectl get pods -o wide
+List all Pods in the namespace with more details
+
+$ kubectl get events --sort-by=.metadata.creationTimestamp
+List event sorted by timestamp
+
+$ kubectl api-resources
+List all supported resource types with their shortnames, API group
+
+#db-pod.yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: db
+  labels:
+    type: db
+    vendor: MongoLabs
+spec:
+  containers:
+  - name: db
+    image: mongo:3.3
+    command: ["mongod"]
+    args: ["--rest", "--httpinterface"]
+ 
+$ kubectl create -f db-pod.yml
+ 
+$ kubectl get pods
+ 
+$ kubectl get pods -o wide
+ 
+$ kubectl get pods -o json
+ 
+$ kubectl get pods -o yaml
+ 
+$ kubectl describe pod db
+Almost the same information as get pods, additionally lists Events of the db Pod
+ 
+$ kubectl describe -f db-pod.yml
+Describe the object created by a specification file
+ 
+https://kubernetes.io/docs/reference/kubectl/cheatsheet/
+ 
+$ kubectl exec db ps aux
+List processes running on the db Pod's only container
+ 
+$ kubectl exec -it db sh
+-it here is for interactive terminal
+ 
+$ kubect logs db
+Get the logs of the container inside db Pod
+ 
+$ kubectl exec -it db pkill mongod
+In this case, db Pod gets restarted as the container is killed when we kill its main process
+
+$ kubectl delete -f db-pod.yml
+Delete the db Pod
+
+#go-demo-2.yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: go-demo-2
+  labels:
+    type: stack
+spec:
+  containers:
+  - name: db
+    image: mongo:3.3
+  - name: api
+    image: vfarcic/go-demo-2
+    env:
+    - name: DB
+      value: localhost
+
+Here we have two containers running in our go-demo-2 Pod, go-demo-2 binary requires a mongo DB for operation.
+Notice the env section in the above yaml file, here DB environment variable is set to localhost
+
+$ kubectl create -f go-demo-2.yml
+
+$ kubectl get -f go-demo-2.yml
+Here we can see that READY says 2/2, this is because go-demo-2 Pod is running two containers
+
+$ kubectl exec -it -c db go-demo ps aux
+$ kubectl exec -it -c <Pod> <Container> <Command>
+
+$ kubectl logs go-demo-2
+Error: a container name must be specified for pod go-demo-2....
+
+$ kubectl logs go-demo-2 -c db
+
+$ kubectl delete -f go-demo-2.yml
+
+#go-demo-2-health.yml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: go-demo-2
+  labels:
+    type: stack
+spec:
+  containers:
+  - name: db
+    image: mongo:3.3
+  - name: api
+    image: vfarcic/go-demo-2
+    env:
+    - name: DB
+      value: localhost
+    livenessProbe:
+      httpGet:
+        path: /this/path/does/not/exist
+        port: 8080
+      initialDelaySeconds: 5
+      timeoutSeconds: 2 # Defaults to 1
+      failureThreshold: 1 # Defaults to 3
+      periodSeconds: 5 # Defaults to 10
+
+Notice the livenessProbe section in the above Pod definition
+initialDelaySeconds: 5 -> k8s will wait for 5 seconds before starting to checking the livenessProbe
+timeoutSeconds: 2 -> livenessProbe http get call will time out in 2 seconds
+
+
+$ kubectl create -f go-demo-2-health.yml
+
+$ kubectl describe -f go-demo-2-health.yml
+Here we can see message regarding the failure of livenessProbe
+'Liveness probe failed: HTTP probe failed with statuscode: 404'
+kubelet kills the main process in the container with failing livenessProbe which causes kubelet to restart the container...
+This cycle will continue as livenessProbe will never pass in this case.
+
+$ kubectl delete -f go-demo-2-health.yml
+
+ReplicaSet
+
+#go-demo-2-rs.yml
+apiVersion: apps/v1beta2
+kind: ReplicaSet
+metadata:
+  name: go-demo-2
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      type: backend
+      service: go-demo-2
+  template:
+    metadata:
+      labels:
+        type: backend
+        service: go-demo-2
+        db: mongo
+        language: go
+    spec:
+      containers:
+      - name: db
+        image: mongo:3.3
+      - name: api
+        image: vfarcic/go-demo-2
+        env:
+        - name: DB
+          value: localhost
+        livenessProbe:
+          httpGet:
+            path: /demo/hello
+            port: 8080
+
+Here we can see two labels type, and service in selector section, Pods of the replica set should match this labels
+
+$ kubectl create -f go-demo-2-rs.yml
+
+$ kubectl get rs
+In the output we can see DESIRED, CURRENT, and READY sections with 2 as value for each of these sections
+
+$ kubectl describe -f go-demo-2-rs.yml
+Here we can see in the Events section that replicaset-controller is responsible for creating the Pods
+i.e. we created the ReplicaSet, and the ReplicaSet Controller created the Pods for us using the template
+
+$ kubectl delete -f go-demo-2-rs.yml --cascade=false
+Here --cascade=false tells kubectl to only delete the replicaset and not the Pods created by the replicaset
+
+$ kubectl get rs
+No resources found.
+
+$ kubectl get pods
+Here we can see two Pods still running, i.e. we deleted the replicaset and not the Pods created by the replicaset
+
+$ kubectl create -f go-demo-2-rs.yml --save-config
+
+$ kubectl get pods
+We now get the same Pods as before !!!!
+i.e. the replicaset controller did not create new Pods as there are already tow Pods with the required labels
+
+#go-demo-2-scaled-rs.yml
+apiVersion: apps/v1beta2
+kind: ReplicaSet
+metadata:
+  name: go-demo-2
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      type: backend
+      service: go-demo-2
+  template:
+    metadata:
+      labels:
+        type: backend
+        service: go-demo-2
+        db: mongo
+        language: go
+    spec:
+      containers:
+      - name: db
+        image: mongo:3.3
+      - name: api
+        image: vfarcic/go-demo-2
+        env:
+        - name: DB
+          value: localhost
+        livenessProbe:
+          httpGet:
+            path: /demo/hello
+            port: 8080
+Here the only difference is that replicas count is set to 4...
+
+$ kubectl apply -f go-demo-2-scaled-rs.yml
+Here kubectl apply command is going to update the existing replicaset with updated replica counts 
+Kubectl apply command is a combination of (1)create if it does not exist + (2)update if it already exist
+
+$ kubectl get pods
+We can see four running Pods, two of those Pods running for quiet some time and only two of the Pods were recently created
+
+$ POD_NAME=$(kubectl get pods -o name | tail -1)
+$ kubectl delete $POD_NAME
+Here we are deleting one of the four Pods to simulate failure of a Pod....
+
+$ kubectl get pods
+Here we see a new Pod has been started in place of the deleted Pod
+ReplicaSets monitor the desired number of replicas and maintain that many replicas
+
+$ POD_NAME=$(kubectl get pods -o name | tail -1)
+$ kubectl label $POD_NAME service-
+This command removes the "service" label from one of the four Pods managed by the ReplicaSet
+The label "service" is one of the label specified in the label selector section of the configuration as given below
+
+  selector:
+    matchLabels:
+      type: backend
+      service: go-demo-2
+
+$ kubectl get pods --show-labels
+Here we can see that there are four Pods with both "service" and "type" labels, and one Pod with just the "type" label
+
+$ kubectl label $POD_NAME service=go-demo-2
+Here we are adding the "service" label back to the Pod, this forces one of the five Pods to be killed by ReplicaSet controller,
+this is done to maintain the desired number of replicas, which is four in our case
+
+$ kubectl get pods --show-labels
+Here we see only four Pods, all of them with both "service" and "type" label
+
+$ kubectl delete -f go-demo-2-scaled-rs.yml
+
+Services: Used to enable communication between Pods
+
+#go-demo-2-rs.yml
+apiVersion: apps/v1beta2
+kind: ReplicaSet
+metadata:
+  name: go-demo-2
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      type: backend
+      service: go-demo-2
+  template:
+    metadata:
+      labels:
+        type: backend
+        service: go-demo-2
+        db: mongo
+        language: go
+    spec:
+      containers:
+      - name: db
+        image: mongo:3.3
+        command: ["mongod"]
+        args: ["--rest", "--httpinterface"]
+        ports:
+        - containerPort: 28017
+          protocol: TCP
+      - name: api
+        image: vfarcic/go-demo-2
+        env:
+        - name: DB
+          value: localhost
+        livenessProbe:
+          httpGet:
+            path: /demo/hello
+            port: 8080
+
+$ kubectl create -f go-demo-2-rs.yml
+This command creates a replica set...
+
+$ kubectl get -f go-demo-2-rs.yml
+
+$ kubectl expose rs go-demo-2 --name=go-demo-2-svc --target-port=28017 --type=NodePort
+Here we are exposing port 28017 of the go-demo-2 Pods as NodePort service...
+If we were running our cluster on a public cloud, we can specify --type=LoadBalancer to create a load balancer for the service
+
+Endpoint Controller:
+Populates the Endpoints object, i.e. joins Services and Pods
+Endpoints object has the list of addresses (ip and port) of endpoints that implement a Service.
+In general, as users we don't need to create Endpoints object.
+Endpoints objects are automatically created when a Service is created and configured with the Pods matching the selector of the Service
+
+Service can also be created without a selector, in that case k8s does not create an associated Endpoints object.
+
+Exposing a set of Pods as a Service involves Endpoints Controller, Kube Proxy, Kube DNS, DNS Server(SkyDNS), and manipulating iptable rules.
+
+$ kubectl describe svc go-demo-2-svc
+
+$ PORT=$(kubectl describe svc go-demo-2-svc -o jsonpath="{.spec.ports[0].nodePort}")
+$ IP=$(minikube ip)
+$ open "http://$IP:$PORT"
+This will open MongoDB console in a browser, each time we refresh the browser we get response from a different MongoDB instance.
+
+$ kubectl delete svc go-demo-2-svc
+
+Declerative Service Configuration:
+
+#go-demo-2-svc.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-demo-2
+spec:
+  type: NodePort
+  ports:
+  - port: 28017
+    nodePort: 30001
+    protocol: TCP
+  selector:
+    type: backend
+    service: go-demo-2
+
+$ kubectl create -f go-demo-2-svc.yml
+
+$ kubectl get -f go-demo-2-svc.yml
+
+$ PORT=$(kubectl describe svc go-demo-2-svc -o jsonpath="{.spec.ports[0].nodePort}")
+$ IP=$(minikube ip)
+$ open "http://$IP:$PORT"
+
+$ kubectl delete -f do-demo-2-svc.yml
+$ kubectl delete -f go-demo-2-rs.yml
+Delete both the Service and ReplicaSet...
+
+Let's split the ReplicaSet in to DB and API, and create separate services for DB and API
+
+#go-demo-2-db-rs.yml
+apiVersion: apps/v1beta2
+kind: ReplicaSet
+metadata:
+  name: go-demo-2-db
+spec:
+  selector:
+    matchLabels:
+      type: db
+      service: go-demo-2
+  template:
+    metadata:
+      labels:
+        type: db
+        service: go-demo-2
+        vendor: MongoLabs
+    spec:
+      containers:
+      - name: db
+        image: mongo:3.3
+        ports:
+        - containerPort: 28017
+
+#go-demo-2-db-svc.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-demo-2-db
+spec:
+  ports:
+  - port: 27017
+  selector:
+    type: db
+    service: go-demo-2
+
+Here the DB Service definition does not specify a Service type as before, Service type defaults to ClusterIP.
+i.e. other applications inside the cluster can access the database, however we can't access the service from outside the cluster.
+
+$ kubectl create -f go-demo-2-db-rs.yml
+
+$ kubectl create -f go-demo-2-db-svc.yml
+
+API ReplicaSet:
+
+#go-demo-2-api-rs.yml
+apiVersion: apps/v1beta2
+kind: ReplicaSet
+metadata:
+  name: go-demo-2-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      type: api
+      service: go-demo-2
+  template:
+    metadata:
+      labels:
+        type: api
+        service: go-demo-2
+        language: go
+    spec:
+      containers:
+      - name: api
+        image: vfarcic/go-demo-2
+        env:
+        - name: DB
+          value: go-demo-2-db
+        readinessProbe:
+          httpGet:
+            path: /demo/hello
+            port: 8080
+          periodSeconds: 1
+        livenessProbe:
+          httpGet:
+            path: /demo/hello
+            port: 8080
+
+Here API connects to DB using the environment variable 'DB', whose value 'go-demo-2-db' same as the DB Service name.
+
+$ kubectl create -f go-demo-2-api-rs.yml
+
+#go-demo-2-api-svc.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-demo-2-api
+spec:
+  type: NodePort
+  ports:
+  - port: 8080
+  selector:
+    type: api
+    service: go-demo-2
+
+Unlike DB service, here we specify the Service type as NodePort as we need to access the API service from outside the cluster.
+
+$ kubectl create -f go-demo-2-api-svc.yml
+
+$ kubectl get all
+New command that gets all objects...
+
+$ PORT=$(kubectl describe svc go-demo-2-api -o jsonpath="{.spec.ports[0].nodePort}")
+$ IP=$(minikube ip)
+$ curl -i  "http://$IP:$PORT/demo/hello"
+HTTP/1.1 200 OK
+...
+...
+hello, world!
+
+$ kubectl delete -f go-demo-2-db-rs.yml
+$ kubectl delete -f go-demo-2-db-svc.yml
+$ kubectl delete -f go-demo-2-api-rs.yml
+$ kubectl delete -f go-demo-2-api-svc.yml
+
+$ minikube delete
