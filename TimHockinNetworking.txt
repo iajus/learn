@@ -303,4 +303,58 @@ These map to Kubernetes APIs:
 > Service type=LoadBalancer
 > Ingress
 
-26:30
+
+L4: Service + LoadBalancer:
+---------------------------
+Change the type of your service
+
+Implemented by the cloud provider controller
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: store-be
+spec:
+  type: LoadBalancer
+  selector:
+    app: store
+    role: be
+  ports:
+  - name: https
+    port: 443
+
+The LoadBalancer info is populated when ready
+
+kind: Service
+apiVersion: v1
+metadata:
+  name: store-be
+  # ...
+spec:
+  type: LoadBalancer
+  selector:
+    app: store
+    role: be
+  clusterIP: 10.9.3.76
+  ports:
+  - name: https
+    port: 443
+  sessionAffinity: None
+status:
+  loadBalancer:
+    ingress:
+    - ip: 86.75.30.9
+
+
+Balancing to VMs:
+-----------------
+The LB only knows about VMs
+VMs do not map 1:1 with pods
+
+The imbalance problem:
+----------------------
+Asume the LB only hits VMs with pods
+The LB only knows about VMs
+Pods can be unevenly distributed over the VMs
+
+31:00
