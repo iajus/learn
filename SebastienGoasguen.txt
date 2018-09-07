@@ -32,4 +32,36 @@ kube-apiserver.yaml
 kube-controller-manager.yaml
 kube-scheduler.yaml
 
+# kubectl get pods --all-namespaces
+
+# docker images
+
+# docker ps
+
+
+On the Worker Node:
+
+# system status kubectl
+
+# more /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+
+# cd /etc/kubernetes/manifests
+# ls
+total 0
+Here the /etc/kubernetes/manifests folder is empty
+
+# docker images
+
+# docker ps
+
+# ps -ef | grep proxy
+... /usr/local/bin/kube-proxy ...
+
+On the Master Node:
+
+# kubectl run nginx --image=nginx
+deployment "nginx" created
+
+# kubectl expose deployments nginx --port 80 --type NodePort
+service "nginx" exposed
 
