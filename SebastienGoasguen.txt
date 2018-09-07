@@ -1,3 +1,35 @@
 Kubernetes Fundamentals
 6th September 2018
 
+https://kubernetes.io/docs/setup/independent/create-cluster-kubeadm/
+https://kubernetes.io/docs/setup/independent/high-availability/
+
+Master Nodes:
+> API Server
+> Scheduler
+> Controller Manager
+> Kubelet
+> Docker
+
+Worker Nodes:
+> Kubelet
+> kube-proxy
+> Docker
+
+On the Master Node:
+
+# systemctl status kubelet
+
+# more /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+...
+Environment="KUBELET_SYSTEM_PODS_ARGS=--pod-manifest-path=/etc/kubernetes/manifests --allow-privileged=true"
+...
+
+# cd /etc/kubernetes/manifests
+# ls
+etcd.yaml
+kube-apiserver.yaml
+kube-controller-manager.yaml
+kube-scheduler.yaml
+
+
