@@ -210,7 +210,7 @@ $ cat pod.json
       }
     ]
    }
- }
+}
  
 $ curl -H "Content-Type: application/json" --data @pod.json -XPOST http://localhost:8001/api/v1/namespaces/default/pods
  
@@ -239,6 +239,7 @@ kube-system
 $ curl -s localhost:8001/api/v1/namespaces
 
 $ kubectl create ns oreilly
+namespace "oreilly" created
 
 $ curl -s localhost:8001/api/v1/namespaces | jq -r .items[].metadata.name
 default
@@ -266,5 +267,360 @@ $ kubectl get pods
 $ kubectl get pods -n oreilly
 
 $ kubectl get pods --all-namespaces
+
+
+Quotas:
+
+$ kubectl create quota foobar --hard pods=1
+resourcequota "foobar" created
+
+$ kubectl get resourcequotas
+
+$ kubectl get resourcequotas foobar -o yaml
+
+$ cat pod.json
+{
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "secondghost"
+  },
+  "kind": "Pod",
+  "spec": {
+    "containers": [
+      {
+        "name": "ghost",
+        "image": "ghost"
+      }
+    ]
+  }
+}
+ 
+$ curl -H "Content-Type: application/json" --data @pod.json -XPOST http://localhost:8001/api/v1/namespaces/default/pods
+{
+  "kind": "Status",
+  "apiVersion": "v1",
+  "metadata": {},
+  "status": "Failure",
+  "message": "pods \"secondghost" is forbidden: exceeded quota: foobar, requested: pods=1, used: pods=1, limited: pods=1",
+  "reason": "Forbidden",
+  "details": {
+    "name": "secondghost",
+    "kind": "pods",
+  },
+  "code": 403
+}
+
+However we can still create the "secondghost" pod in oreilly namespace...
+$ curl -H "Content-Type: application/json" --data @pod.json -XPOST http://localhost:8001/api/v1/namespaces/oreilly/pods
+
+$ kubectl get pods --all-namespaces
+
+
+Using Labels to select resources:
+
+$ cat pod.json
+{
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "secondghost"
+  },
+  "kind": "Pod",
+  "spec": {
+    "containers": [
+      {
+        "name": "ghost",
+        "image": "ghost"
+      }
+    ]
+  }
+}
+
+$ kubectl create -f pod.json
+pod "ghost" created
+
+$ kubectl get pods
+
+$ kubectl get pods --show-labels
+... ... ... ... LABELS
+... ... ... ... <none>
+
+$ kubectl label pods ghost foo=bar
+pod "ghost" labeled
+
+$ kubectl get pods --show-labels
+... ... ... ... LABELS
+... ... ... ... foo=bar
+
+$ kubectl label pods ghost bar=baz
+pod "ghost" labeled
+
+$ kubectl get pods --show-labels
+... ... ... ... LABELS
+... ... ... ... bar=baz,foo=bar
+
+Every resource in Kubernetes can be labeled
+
+$ kubectl get pods ghost -o yaml
+kind: Pod
+apiVersion: v1
+metadata:
+  creationTimestamp: 2018-09-21T11:10:40Z
+  labels:
+    bar: baz
+    foo: bar
+  name: ghost
+  namespace: default
+  resourceVersion: "46944"
+  ...
+...
+
+Get pods by label
+$ kubectl get pods -l green=blue
+
+$ kubectl get pods -l foo=bar
+
+$ kubectl get pods -Lfoo
+
+
+Kubernetes API Schema:
+
+$ kubectl api-versions
+
+$ kubectl proxy
+
+$ curl localhost:8001/api/v1
+Some objects are namespaced, and some are not namespaced
+
+$ cat pod.json
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+    "name": "ghost"
+  },
+  "spec": {
+    "containers": [
+      {
+        "name": "ghost",
+        "image": "ghost"
+      }
+    ]
+  }
+}
+
+
+Deploying Our First Application:
+
+$ vi pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ghost
+spec:
+  containers:
+  - name: ghost
+    image: ghost
+
+$ kubectl create -f pod.yaml
+pod "ghost" created
+
+$ kubectl get pods
+
+$ kubectl delete pods ghost
+
+$ kubectl get pods
+
+$ vi rs.yaml
+apiVersion: extensions/v1beta1
+kind: ReplicaSet
+metadata:
+  name: ghost
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: ghost
+  template:
+    metadata:
+      name: ghost
+      labels:
+        app: ghost
+    spec:
+      containers:
+      - name: ghost
+        image: ghost
+
+$ kubectl create -f rs.yaml
+replicaset "ghost" created
+
+$ kubectl get pods
+
+$ kubectl delete pods ghost-0fd2b
+pod "ghost-0fd2b" deleted
+
+$ kubectl get pods
+
+$ vi svc.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: ghost
+spec:
+  selector:
+    app: ghost
+  ports:
+  - port: 2368
+  type: NodePort
+
+$ kubectl create -f svc.yaml
+service "ghost" created
+
+$ kubectl get svc
+
+$ kubectl get rs
+
+$ kubectl scale rs ghost --replicas=2
+
+$ kubectl get rs
+
+$ kubectl get pods
+
+$ kubectl scale rs ghost --replicas=10
+
+$ kubectl get pods -w
+
+
+Run Generator:
+
+$ kubectl run ghost --image=ghost:1.7 --port 2368 --expose=true
+service "ghost" created
+deployment "ghost" created
+
+$ kubectl get pods
+
+$ kubectl get rs
+
+$ kubectl get deployments
+
+$ kubectl get svc
+
+$ kubectl edit svc ghost
+change the type: to NodePort
+
+$ kubectl get svc
+
+
+Rolling Update:
+
+$ kubectl run ghost --image=ghost:1.7 --port 2368 --expose=true
+service "ghost" created
+deployment "ghost" created
+
+$ kubectl scale deployments ghost --replicas=4
+
+$ kubectl get pods
+
+$ kubectl get pods -o json | jq -r .items[].spec.containers[].image
+ghost:1.7
+ghost:1.7
+ghost:1.7
+ghost:1.7
+
+$ kubectl edit deployments ghost
+change the -image: to ghost:1.8
+
+$ kubect get pods
+Now we should see that some pods are in Terminating state, and some pods are in ContainerCreating state
+
+$ kubectl get pods -o json | jq -r .items[].spec.containers[].image
+ghost:1.8
+ghost:1.8
+ghost:1.8
+ghost:1.8
+
+$ kubect get rs
+Here we should see two replicasets...
+Everytime we update a deployment, a new replicaset is created.
+
+$ kubectl get deployments
+
+
+
+Helm package manager:
+
+$ kubectl get pods --all-namespaces
+
+$ which helm
+/usr/local/bin/helm
+
+$ helm init
+...
+...
+Tiller (the helm server side component) has been installed into your kubernetes Cluster.
+Happy Helming!
+
+$ kubectl get pods --all-namespaces
+
+$ helm search redis
+...
+...
+
+$ helm install stable/redis
+
+$ helm ls
+
+$ kubectl get pods
+
+$ kubectl get secret --namespace default lolling-coral-redis -o jsonpath="{.data.redis-password}" | base64 --decode
+........
+
+$ kubectl exec -ti <redis-pod-name> -- redis-cli -a <redis-password>
+> info
+
+
+
+Extending the Kubernetes API: CRD
+
+$ cat db-crd.yaml
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: databases.foo.bar
+spec:
+  group: foo.bar
+  version: v1
+  scope: Namespaced
+  names:
+    plural: databases
+    singular: database
+    kind: DataBase
+    shortNames:
+    - db
+
+$ kubectl create -f db-crd.yaml
+customresourcedefinition "databases.foo.bar" created
+
+$ kubectl get crd
+...
+
+$ kubectl get databases
+
+$ kubectl get db
+
+$ cat db.yaml
+apiVersion: foo.bar/v1
+kind: DataBase
+metadata:
+  name: my-new-db
+spec:
+  type: mysql
+
+$ kubectl create -f db.yaml
+database "my-new-db" created
+
+$ kubectl get db my-new-db -o yaml
+apiVersion: foo.bar/v1
+kind: DataBase
+....
 
 $ 
