@@ -1,0 +1,84 @@
+Container Native Load Balancing on GKE:
+
+10th September 2018
+
+Three Items:
+1. Containers as first-class load balancer endpoints
+2. Kubernetes Engine native support for L7 authorization, security, caching and modern protocols
+3. Comming Soon
+
+Kubernetes 1.0 launched in 2015
+
+
+Exposing Services to the Internet
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+spec:
+  selector:
+    app: MyApp
+  ports:
+  - port: 80
+  type: ClusterIP
+
+
+NodePort:
+Uses Node's IP, exposes a service on the same port on every node.
+>Simple to understand
+>Portable: No external dependencies
+<Limited to ports 30000-32767
+<Clients need to adapt to Node IP changes
+<Can not use advanced features
+<Suboptimal load balancing, just provides basic load balancing algorithm
+
+
+LoadBalancer:
+>Simple to understand model
+>Portable across supported platforms
+>Service exposed thru external IP address
+<Lack of advanced features
+<Suboptimal load balancing
+
+
+Ingress:
+>Portable across implementations
+>Support common L7 constructs: (e.g. TLS termination, URL path mapping)
+<Supports only a single K8s cluster
+<Suboptimal load balancing
+There are many Ingress impplementations, on GKE Google Cloud Load balancer is used to implement Ingress
+
+
+Data path in Kubernetes Load Balancing:
+
+In a typical Ingress setup, Load Balancer points to an Instance Group.
+The Instance Group contains all cluster Nodes
+The kube-proxy running on each of the Nodes is responsible for forwarding the traffic to actual Pods
+Kube-proxy programs the iptables on the VMs to forward traffic to the Pods
+This setup results in inefficient performance due to multiple network hops
+
+i.e. iptables may select a Pod that is on a different Node, thus adding a extra network hop
+the response packet passes through the same VM adding another netwokr hop
+
+
+Network Endpoint Group: (Currently in alpha)
+>Containers are "just another endpoints"
+>Accurate cloud-level health checks and load balancing
+>No extra network hops; direct connection from load balancer to container
+NO iptables magic, NO proxy involved, NO NAT, NO second hop
+
+>Containers first approach
+Native support of Google Cloud Load Balancer features.
+Traffic shaping
+Advanced load balancing algorithms
+
+>Optimal data path
+Eliminates extra network hop
+Reduces end-to-end request latency
+Predictable network performance
+
+>Visibility
+Makes it easier to troubleshoot our services at Pod level
+Accurate health checks
+
