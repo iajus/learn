@@ -82,3 +82,18 @@ Predictable network performance
 Makes it easier to troubleshoot our services at Pod level
 Accurate health checks
 
+
+Manjot Pahwa: GCP Network Services
+
+Ingress on GCP and Network Services:
+
+kind: Ingress
+...
+spec:
+  ...
+
+L7 Features:
+> Cloud Armor: Denial of Service Defence
+> Identity-aware Proxy (IAP): Identity-based access control
+> Cloud CDN: Global Caching Infrastructure
+
