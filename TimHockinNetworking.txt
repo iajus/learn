@@ -1,5 +1,4 @@
-GCP Next 17
-***********
+The ins and outs of networking in Google Container Engine and Kubernetes
 
 API Server:
 -----------
