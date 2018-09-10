@@ -24,3 +24,9 @@ https://github.com/thesandlord/mongo-k8s-sidecar
 
 https://kubernetes.io/blog/2017/01/running-mongodb-on-kubernetes-with-statefulsets/
 
+
+Multi-Cluster:
+
+Federation Control Plane: Service that manages the global state of all federated clusters
+kubefed: Command line tool that simplifies federation setup
+
