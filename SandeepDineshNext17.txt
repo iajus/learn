@@ -30,3 +30,36 @@ Multi-Cluster:
 Federation Control Plane: Service that manages the global state of all federated clusters
 kubefed: Command line tool that simplifies federation setup
 
+$ kubectl --context=worldscalemicroservices get clusters
+NAME                    STATUS    AGE
+cluster-asia-east1-b    Ready     39s
+cluster-europe-west1-d  Ready     39s
+...
+cluster-us-west1-a      Ready     39s
+
+Here worldscalemicroservices is virtual federated context
+
+kube-dns runs as a Pod inside the cluster
+
+
+Multi-Cluster:
+Federated Ingress: Native Kubernetes L7 Router
+HTTP(s) Load Balancer: Global L7 Load Balancing with a single IP address and SSL offload
+
+
+Ingress:
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: web
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: "kubernetes-ingress"
+spec:
+  backed:
+    serviceName: web
+    servicePort: 80
+
+
+Cloud Storage Regional Buckets
+
