@@ -1,1 +1,26 @@
+Globally Scalable Microservices with GKE and Cloud Load Balancing:
+
+11th September 2018
+
+Meme Service:
+
+MemeCreator: Stateles Microservice
+
+dnsPolicy: ClusterFirst
+restartPolicy: Always
+securityContext: {}
+terminationGracePeriodSeconds: 30
+
+
+MongoDB Database: Stateful
+
+MongoDB is NOT "Cloud Native": Unlike few other DBs, MongoDB can't handle node failure
+PersistentVolumes: Data volume that persists even if the pod restarts or moves
+Sidecar Container: A container that helps the primary container do its job
+StatefulSets: Set of Pods that can scale horizontally with each Pod maintaining a consistent network and disk identity
+Headless Service: A service that does not do load balancing, but exposes the Pods directly with DNS
+
+https://github.com/thesandlord/mongo-k8s-sidecar
+
+https://kubernetes.io/blog/2017/01/running-mongodb-on-kubernetes-with-statefulsets/
 
