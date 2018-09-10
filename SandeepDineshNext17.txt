@@ -63,3 +63,33 @@ spec:
 
 Cloud Storage Regional Buckets
 
+const bucket = process.env.BUCKETNAME
+
+We can use a config map to store the regional buckets information that will then be exposed to the container as an environment variable or file
+
+Secrets: similar to configmaps, but obfuscated. NOT ENCRYPTED
+We can use vault to encrypt secrets
+
+www.geoscreenshot.com -> get the geo location of a IP address
+
+If we don't have a ConfigMap that a Deployment depends on,
+Then the Deployment will be in PENDING state till the ConfigMap is created
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gcs
+  namespace: default
+data:
+  bucketname: worldclassmicroservices-a-east
+
+Microservices are more than code and infrastructure
+
+Sync vs Async:
+Synchronous (point-to-point) communication is easy to do, and Kubernetes makes it even easier.
+This can be done RESTfully or with RPCs.
+Either way, service discovery and support for these "synchronous" APIs feel native to Kubernetes
+
+Async:
+Pod 1 puts work in to a Work Queue, Pod 2 picks up work from Work Queue, and etc...
+
