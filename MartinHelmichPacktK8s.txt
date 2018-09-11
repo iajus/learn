@@ -31,9 +31,38 @@ Add-Ons NOT enabled by default:
 > Ingress
 > Heapster
 
-
 $ minikube addons enable ingress
 
 $ minikube addons enable heapster
 
 
+Pods - The Basic Deployment Unit
+> Multiple containers scheduled on the same node
+> Shared network namespaces for all containers in the Pod
+
+Namespaces - Resource Grouping and Isolation
+> Purely virtual for grouping resources
+> Two namespaces in a fresh Kubernetes cluster: default and kube-system
+> No additional isolation at container level
+
+imagePullSecret:
+Option for authenticating docker pull from private registries
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pod
+  namespace: default
+spec:
+  containers:
+      name: service
+      image: nginx
+      ports:
+        - containerPort: 80
+      env:
+        - name: SOME_ENV_VAR
+          value: Hello World
+
+Higher Level Kubernetes Resources:
+1. ReplicaSet
+2. 
