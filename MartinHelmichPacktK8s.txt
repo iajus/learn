@@ -2,3 +2,38 @@ Develop and Operate Microservices on Kubernetes : Martin Helmich
 
 12th September 2018
 
+https://github.com/PacktPublishing/Develop-and-Operate-Microservices-on-Kubernetes
+
+Installing Minikube:
+
+https://github.com/kubernetes/minikube/releases
+
+$ chmod +X ~/downloads/minikube-linux-amd64
+
+$ sudo mv ~/downloads/minikube-linux-amd64 /usr/local/bin/minikube
+
+$ minikube status
+
+$ minikube start
+
+$ minikube stop
+
+$ minikube delete
+
+Minikube Add-Ons:
+
+Add-Ons enabled by default:
+> DNS
+> Dashboard
+> Storage provisioner
+
+Add-Ons NOT enabled by default:
+> Ingress
+> Heapster
+
+
+$ minikube addons enable ingress
+
+$ minikube addons enable heapster
+
+
