@@ -63,6 +63,78 @@ spec:
         - name: SOME_ENV_VAR
           value: Hello World
 
+
+> Each Pod is assigned to a specific Node in the cluster
+> If a Pod crashes, it will be restarted
+> If a Node crashes, Pods running on it will be lost as well
+
+
 Higher Level Kubernetes Resources:
 1. ReplicaSet
-2. 
+2. Deployment
+3. StatefulSet
+
+ReplicaSet
+> Manages Pods
+> Self-healing and Scalable
+
+Deployment
+> Manages ReplicaSets
+> Rolling updates and rollbacks
+
+StatefulSet
+> Similar to ReplicaSet
+> Pods have stable network identity
+> Pods have a startup order
+
+
+Labels:
+Every object can have arbitrary number of labels
+We can use labels to query and filter objects
+
+$ kubectl get pods -l app=my-app
+
+
+ReplicaSet Properties
+1. Pod template
+  > Definition for Pods that are managed by this ReplicaSet
+2. Replica count
+  > Defines how many instances of the Pod should be running at any time
+3. Label Selector
+  > Determines which Pods are manaed by the ReplicaSet
+
+Example:
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: my-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-service
+  template:
+    metadata:
+      labels:
+        app: my-service
+    spec:
+      containers:
+      - name: service
+        image: nginx
+
+$ kubectl apply -f replicaset.yaml
+
+Pod Networking:
+> Pods have IP addresses
+> Pod IPs are routable within the cluster (no external connectivity)
+< Pods are short-lived
+< Addresses may change frequently
+< No DNS for Pod IPs
+< No load balancing
+
+Services:
+> Selects a set of Pods by label
+> One stable IP and DNS name for a group of Pods
+> Round-robin load balancing
+> Automatically adds/removes Pods as they come and go
+
