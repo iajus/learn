@@ -138,3 +138,4 @@ Services:
 > Round-robin load balancing
 > Automatically adds/removes Pods as they come and go
 
+Continue from "Connecting Services"
