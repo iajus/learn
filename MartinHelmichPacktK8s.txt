@@ -221,4 +221,118 @@ spec:
       targetPort: 80
 
 
+
 HTTP Connectivity with Ingress:
+
+Services have few disadvantages:
+< Do raw TCP/UDP forwarding
+< Do not know about application protocols like HTTP
+
+Ingress:
+> Defines request routing for HTTP requests to services
+> Works at application layer
+> Supports path and host-based routing
+> Supports caching, authentication and more
+
+Example:
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: my-ingress
+spec:
+  rules:
+  - host: my-app.example
+    http:
+      paths:
+      - path: /shop
+        backend:
+          serviceName: my-service
+          servicePort: 80
+      - path: /home
+        backend:
+          serviceName: my-other-service
+          servicePort: 80
+
+Ingress resource can have multiple Host rules
+One Host rule per HTTP host name
+
+Each Host rule can have multiple Path rules
+Each Path rule forwards incoming HTTP request to a specific Service resource
+Service needs to be defined separately
+
+Ingress Controllers:
+Ingress definitions are purely virtual
+They require an Ingress Controller that accepts HTTP connections and forwards request where they should go
+i.e. cluster must have an Ingress Controller running in order for the Ingress resource to work
+
+ingress-nginx, ingress-gce, F5 BIG-IP, kong, and Traefik are the Ingress Controllers currently available.
+
+$ kubectl apply -f ingress.yaml
+
+$ kubectl cluster-info
+
+$ minikube addons list
+
+$ minikube addons enable ingress
+
+$ minikube ip
+
+Ingress Controller Features:
+> TLS Offloading (This frees us from having to manage Keys and Certificates within our own Pods)
+> Rate Limiting
+> Authentication
+
+
+Managing Application Lifecycle with Deployments:
+
+ReplicaSet Limitations:
+< When a ReplicaSet creates a new Pod, it will use the Pod template defined in its specification
+< If we change the specification, the ReplicaSet controller will not update any of the existing Pods
+< New Pods are created with new image, Existing Pods are not updated
+< Only way to update ReplicaSet is to delete and recreate
+
+Deployment Objects:
+> Rolling Updates:
+> Deployments manage multiple versions of a ReplicaSet
+> On update of specification, a new ReplicaSet is created and gradually scaled up
+> The old ReplicaSet is gradually scaled down
+
+Example:
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-service
+    template:
+      metadata:
+        labels:
+          app: my-service
+      spec:
+        containers:
+        - name: service
+          image: nginx:1.13.11
+
+$ kubectl apply -f deployment.yaml
+
+$ kubectl get pods
+
+$ kubectl get replicaset
+
+$ kubectl edit deployment my-deployment
+Change the Container Image Version....
+
+$ kubectl get pods
+
+$ kubectl get replicasets
+
+$ kubectl rollout undo deployment/my-deployment
+
+$ kubectl get replicasets
+
+
+
+Stateful Services and Storage Drivers:
