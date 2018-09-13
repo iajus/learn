@@ -598,7 +598,85 @@ StatefulSets Vs Deployments
 < Manually configured shared volumes
 
 
+ConfigMap:
+> Can contain arbitrary key/value pairs
+> Can be used by multiple Pods at once
+> Can be updated independently of the Pod
 
-Managing Configuration Data:
+Example ConfigMap contents:
+data:
+  someVariable: "some value"
 
-ConfigMaps:
+In the Pod definition...
+env:
+- name: SOME_VARIABLE
+  valueFrom:
+    configMapKeyRef:
+      name: my-configmap
+      key: someVariable
+
+ConfigMap Example:
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-configmap
+data:
+  someVariable: "some value"
+  someBoolean: "true"
+
+NOTE: Values of ConfigMap key/value pair must be STRINGS
+
+ConfigMap Usage Example:
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  containers:
+  - name: my-service
+    image: nginx:1.3.12
+    env:
+    - name: SOME_VARIABLE
+      valueFrom:
+        confiMapKeyRef:
+          name: my-configmap
+          key: someVariable
+
+ConfigMap "my-configmap" must exist when we create the Pod,
+otherwise the Pod will go in to Pending state
+
+Variable value is set when the Pod is started,
+any updates to the ConfigMap after the Pod is started are not reflected in already running Pods
+
+$ kubectl apply -f configmap.yaml
+
+$ kubectl get configmaps
+
+$ vi pod.yaml
+kind: Pod
+apiVersion: v1
+metadata:
+  name: my-pod
+spec:
+  containers:
+  - name: app
+    image: alpine
+    command: ["sleep", "3600"]
+    env:
+    - name: SOME_VARIABLE
+      valuFrom:
+        configMapKeyRef:
+          name: my-configmap
+          key: somevariable
+
+$ kubectl apply -f pod.yaml
+pod "my-pod" created
+
+$ kubectl exec -it my-pod sh
+# env
+...
+...
+SOME_VARIABLE=some value
+...
+
+Injecting Configuration Files into Pods:
