@@ -462,3 +462,25 @@ $ kubectl get pods
 If this Pod is deleted and recreated, it would still use the same PVC and persist data
 
 
+Automatic Volume Provisioning: Storage Class
+
+Cluster / Storage Operator:
+Creates -> StorageClass
+
+Application Operator:
+Creates -> PersistentVolumeClaim
+In this case PersistentVolumeClaim references the Storage Class
+This is picked up by Kubernetes Volume Provisioner to create a new PersistentVolume
+The Kubernetes Volume Provisioner also bind the PV with PVC
+
+StorageClass Example:
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ssd-fast
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: io1
+  zones: us-central1
+  iopsPerGB: "20"
+
