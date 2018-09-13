@@ -366,3 +366,99 @@ Key features:
 
 https://cloud.google.com/filestore/docs/accessing-fileshares
 
+
+
+Working with Persistent Volumes:
+
+PersistentVolume: Refers to a specific network block device or file system
+PersistentVolumeClaim: Claims a PV for use in one or more Pods
+
+Personas in PV and PVC
+
+Cluster / Storage Operator:
+> Knoledgeable in storage architecture
+> Knows not much about application architecture
+> Creates PV
+
+Application Operator:
+> Knows about application architecture
+> Not familiar with cluster and storage operations
+> Creates PVC, Pod, Deployment, ReplicaSet, and StatefulSet
+
+
+PersistentVolume Example:
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: my-volume
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  awsElasticBlockStore:
+    volumeID: vol-08374e22abe6cb9b6
+    fsType: ext4
+
+accessModes: can also have ReadWriteMany that allows many Pods to read and write at same time
+
+
+PersistentVolumeClaim Example:
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-volume-claim
+spec:
+  resources:
+    requests:
+      storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+
+
+We can also use Label Selector with PV and PVC
+i.e. Label the PV with certain labels and use those labels in PVC Label Selector
+
+Once we have created a PersistentVolume and PersistentVolumeClaim,
+we can use the PersistentVolumeClaim in a Pod or StatefulSet
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-database
+spec:
+  containers:
+    - name: database
+      image: mysql:5.7
+      env:
+        #...
+      volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: data
+  volumes:
+    - name: data
+      persistentVolumeClaim:
+        claimName: my-volume-claim
+
+
+$ kubectl apply -f persistentvolume.yaml
+persistentvolume "my-volume" created
+
+$ kubectl get pv
+NAME        CAPACITY   ...
+my-volume   10Gi       ...
+
+$ kubectl apply -f persistentvolumeclaim.yaml
+persistentvolumeclaim "my-volume-claim" created
+
+$ kubectl get pvc
+NAME              STATUS   VOLUME                                CAPACITY   ACCESS MODES   ...
+my-volume-claim   Bound    pvc-7f9c4429-6777-11e8-080027c553e0   5Gi        RWO            ...
+
+$ kubectl apply -f pod.yaml
+pod "my-database" created
+
+$ kubectl get pods
+If this Pod is deleted and recreated, it would still use the same PVC and persist data
+
+
