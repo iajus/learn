@@ -484,3 +484,121 @@ parameters:
   zones: us-central1
   iopsPerGB: "20"
 
+Values in the parameters: section here are Provisioner dependent
+
+PersistentVolumeClaim Example with StorageClass:
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: my-volume-claim
+spec:
+  storageClass: ssd-fast
+  resources:
+    requests:
+      storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+
+$ kubectl get storageclass
+
+$ kubectl get pvc
+
+$ kubectl get pv
+
+
+
+StatefulSets:
+> Manage Pods and Volumes
+> Self-healing and scalable
+> Ideal for clustered stateful apps
+
+Headless Service:
+> Resolve StatefulSet via DNS
+> Resolve individual members via DNS
+> NO load balancing, DNS only
+
+StatefulSet Example:
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: my-database
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: my-database
+  service: my-db-service
+  template:
+    metadata:
+      labels:
+        app: my-database
+    spec:
+      containers:
+      - name: db
+        image: mongo:3.7.9
+        ports:
+        #...
+        volumeMount:
+        - name: data
+          mountPath: /data
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ReadWriteOnce]
+      storageClassName: ssd-fast
+      resources:
+        requests:
+          storage: 10Gi
+
+
+Headless Services Example:
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-db-service
+spec:
+  ports:
+  - ports: 27017
+    name: mongodb
+  clusterIP: None
+  selector:
+    app: my-database
+
+Here the "clusterIP: None" specifies Only DNS, NO IP load balancing
+
+$ kubectl apply -f headless-service.yaml
+
+$ kubectl apply -f statefulset.yaml
+
+$ kubectl get pods
+Here we will see three Pods, my-database-0, my-database-1, and my-database-2
+
+$ kubectl get pvc
+
+$ kubect run --rm -it --image alpine test
+# nslookup my-db-service
+...
+Name:      my-db-service
+Address 1: 172.17.0.9 my-database-2.my-db-service.default.svc.cluster.local
+Address 2: 172.17.0.7 my-database-0.my-db-service.default.svc.cluster.local
+Address 3: 172.17.0.4 my-database-1.my-db-service.default.svc.cluster.local
+#
+Here we can see that the service name "my-db-service" resolves to individual IPs of the three Pods
+
+
+StatefulSets Vs Deployments
+> Stable identity, DNS-addressable
+< No stable identity
+
+> Pods are started and stopped in order
+< Pods are started / stopped all at once, or randomly in case of scaling
+
+> Volume provisioning for new members
+< Manually configured shared volumes
+
+
+
+Managing Configuration Data:
+
+ConfigMaps:
