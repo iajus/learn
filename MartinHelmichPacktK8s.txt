@@ -137,5 +137,88 @@ Services:
 > One stable IP and DNS name for a group of Pods
 > Round-robin load balancing
 > Automatically adds/removes Pods as they come and go
+> DNS name: my-service.services.cluster.local
 
-Continue from "Connecting Services"
+Discovering Services:
+
+Environment Variables
+Kubelet adds a set of environment variables to the Pod for each active Service in the cluster.
+{SVCNAME}_SERVICE_HOST and {SVCNAME}_SERVICE_PORT where the Service name is uppercased and any dashes are converted to underscores
+e.g. Service named "redis-master" will create the below environment variables inside the Pods
+REDIS_MASTER_SERVICE_HOST=10.0.0.11
+REDIS_MASTER_SERVICE_PORT=6379
+
+Any Service that a Pod wants to access MUST BE CREATED BEFORE the Pod itself,
+otherwise the environment variables will not be populated
+
+DNS Service Discovery:
+Provided by DNS Server cluster add-on which watches the Kubernetes API for new Services
+DNS Server creates a set of DNS records for each new Service
+All Pods are able to resolve the Service name automatically
+
+E.g. If we have a Service named "my-service" in Namespace "my-ns", then a DNS record for "my-service-my-ns" is created.
+Pods in the "my-ns" Namespace are able to do name lookup fo "my-service"
+Pods in other Namespaces must qualify the name as "my-service-my-ns"
+
+https://kubernetes.io/docs/concepts/services-networking/service/
+
+https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+
+ClusterIP Service:
+> Stable internal IP
+> Stable internal DNS
+> Routed within the cluster
+> Can be used by Pods in the cluster to connect to the Pods selected by a Service
+
+NodePort Service:
+> A ClusterIP Service is created
+> Every Node gets a public TCP port forwarding to that ClusterIP Service
+
+LoadBalancer Service:
+> A NodePort Service is created
+> Additionally a load balancer is created to allow external incomming traffic
+
+
+Example:
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+spec:
+  type: ClusterIP
+  selector:
+    app: my-service
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+
+$ kubectl apply -f service.yaml
+
+$ kubectl get services
+
+$ kubectl run --rm -it --image=alpine my-test
+# apk -U add curl
+...
+# curl -v my-service
+...
+This shows that we can access the service by simply using its name from other Pods in the same Namespace
+
+FQDN: service-name.namespace-name.svc.cluster.local
+
+Example Load Balancer Service:
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: my-service
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+
+
+HTTP Connectivity with Ingress:
