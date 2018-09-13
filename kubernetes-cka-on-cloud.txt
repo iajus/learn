@@ -1,0 +1,53 @@
+GCP Cloud Shell
+A machine instance in the cloud that can serve as our command line
+Cloud Shell has gcloud command line already installed and ready for use.
+
+$ gcloud auth list
+Show all the credentials that can work with our current project
+
+$ gcloud config list project
+Show the current default project configured with gcloud
+
+$ gcloud config --help
+$ gcloud help config
+Show help for gcloud config
+
+$ gcloud config list
+Show the properties set for the current configuration
+
+$ gcloud config list --all
+Show all config properties, including the default properties
+
+$ export PS1='$'
+
+$ gcloud config set compute/zone us-central1-a
+
+$ gcloud config set compute/region us-central1
+
+$ gcloud container cluster create my-first-cluster --num-nodes 1
+
+$ gcloud compute instances list
+
+$ kubectl run wordpress --image=tutum/wordpress --port=80
+deployment "wordpress" created
+
+$ kubectl get pods
+...
+
+$ kubectl expose pod wordpress-2979532868-3s3w1 --name=wordpress --type=LoadBalancer
+
+$ kubectl describe services wordpress
+...
+...
+LoadBalancer Ingress: 104.197.255.221
+...
+
+Google Cloud Console => Compute Engine:
+Click on any of the gke VMs and explore the details...
+
+gke VM Custom Metadata
+cluster-name
+kube-env
+user-data
+
+$ 
