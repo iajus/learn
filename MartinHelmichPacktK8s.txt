@@ -615,7 +615,7 @@ env:
       name: my-configmap
       key: someVariable
 
-ConfigMap Example:
+ConfigMap Environment Variable Example:
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -626,7 +626,7 @@ data:
 
 NOTE: Values of ConfigMap key/value pair must be STRINGS
 
-ConfigMap Usage Example:
+ConfigMap Environment Variable Usage Example:
 apiVersion: v1
 kind: Pod
 metadata:
@@ -645,7 +645,7 @@ spec:
 ConfigMap "my-configmap" must exist when we create the Pod,
 otherwise the Pod will go in to Pending state
 
-Variable value is set when the Pod is started,
+Environment Variable value is set when the Pod is started,
 any updates to the ConfigMap after the Pod is started are not reflected in already running Pods
 
 $ kubectl apply -f configmap.yaml
@@ -679,4 +679,144 @@ $ kubectl exec -it my-pod sh
 SOME_VARIABLE=some value
 ...
 
+
 Injecting Configuration Files into Pods:
+
+ConfigMap Example:
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-configmap
+data:
+  config.ini: |
+    some_variable = foo
+    some_other_variable = baz
+  database.ini: |
+    uri = mongodb://my-database:27017/test
+
+ConfigMap Usage Example:
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  containers:
+  - name: my-service
+    image: nginx:1.3.12
+    volumeMounts:
+    - name: config
+      mountPath: /etc/config
+  volumes:
+  - name: config
+    configMap:
+      name: my-configmap
+
+NOTE: ConfigMap volumes are mounted READ-ONLY
+
+NOTE: volumeMount is AUTOMATICALLY UPDATED when the ConfigMap changes
+This is not the case when using confiMapKeyRef to set Environment Variables in the Pod
+
+$ ls
+config.ini database.ini
+
+$ kubectl create configmap my-configmap --from-file=.
+configmap "my-configmap" created
+
+$ kubectl edit configmap my-configmap
+
+$ kubectl apply -f pod.yml
+pod "my-pod" created
+
+$ kubectl exec -it my-pod sh
+# ls -l /etc/config
+config.ini -> ..data/config.ini
+database.ini -> ..data/database.ini
+# cat /etc/config/config.ini
+some_variable = foo
+some_other_variable = baz
+
+
+Secrets:
+> Very similar to ConfigMap
+> Encryption at rest possible (not default yet)
+> Strict access control possible
+
+Secret Example:
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-secret
+data:
+  test: VGVzdA==
+
+On the storage level, secrets are stored base64 encoded
+
+NOTE: base64 is NOT ENCRYPTION !!!
+
+Secrets Usage in Environment Variables:
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  containers:
+  - name: my-service
+    image: nginx:1.3.12
+    env:
+    - name: SOME_SECRET_VARIABLE
+      valueFrom:
+        secretKeyRef:
+          name: my-secret
+          key: someVariable
+
+
+Secrets Usage in Volumes:
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  containers:
+  - name: my-service
+    image: nginx:1.3.12
+    volumeMounts:
+    - name: secret
+      mountPath: /etc/secret
+  volumes:
+  - name: secret
+    secret:
+      name: my-secret
+
+NOTE: Values of secret key/value pair MUST BE base64 ENCODED!!!
+
+$ kubectl create secret generic my-secret --from-file=.
+This command will import all files in the current directory and their content in to a new secret object
+
+$ kubectl edit secret my-secret
+
+$ kubectl create secret generic my-other-secret --from-literal=someVariable=someValue
+
+
+Composing Environment Variables:
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  containers:
+  - name: my-service
+    image: nginx:1.3.12
+    env:
+    - name: MONGODB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: mongodb-credentials
+          key: password
+    - name: MONGODB_URL
+      value: "mongodb://user:$(MONGODB_PASSWORD)@mongo/database"
+      
+Here we have used MONGODB_PASSWORD Environment variable to compose MONGODB_URL Environment variable
+
+CONTINUE FROM: Chapter 5: Continous Delivery with Kubernetes
+
