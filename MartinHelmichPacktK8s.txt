@@ -818,5 +818,90 @@ spec:
       
 Here we have used MONGODB_PASSWORD Environment variable to compose MONGODB_URL Environment variable
 
-CONTINUE FROM: Chapter 5: Continous Delivery with Kubernetes
+
+
+Continous Delivery with Kubernetes:
+
+$ kubectl set image deployment/my-deployment app=app:v1.5
+This command updates the deployment specification to use the new image.
+Updating the image will cause the deployment controller to start the Rolling Update
+
+NOTE: "kubectl set image" command requires that Deployment already exists
+
+$ kubectl set image deployments --namespace=some-namespace --dry-run --selector app=worker worker=image:newtag
+
+
+Helm Architecture:
+
+Helm Server (Tiller)
+> Runs in Kubernetes cluster (kube-system namespace)
+> Quick setup (helm init command)
+
+Helm Charts:
+> Portable deployment definitions
+> Chart can be provided by us for our own applications
+> Charts are available from many third party providers
+
+Helm Client:
+> Runs on your machine (or CI server)
+> Reads charts and deploys them to Helm server
+> Uses the charts and creates Releases on the server
+
+Each Release then creates kubernetes resources like Pods, Deployments, StatefulSets, Services, and Ingreses
+Each chart can be released multiple times within the same Kubernetes cluster
+Helm can also update existing releases when a new version of the chart is available
+
+Download & Install Helm:
+https://docs.helm.sh/using_helm/#installing-helm
+
+$ helm init
+
+$ kubectl get pods --namespace kube-system
+...
+tiller-deploy-587df449fb-tgt5f   1/1   Running   0   12s
+
+Helm Chart File Structure:
+
+my-chart/
+    Chart.yaml
+    values.yaml
+    templates/
+        deployment.yaml
+        service.yaml
+
+Chart.yaml
+Contains general metadata about the helm chart, like name and version
+Version here is the version of the chart, and not of the application defined by the chart
+
+values.yaml
+Contains parameters configurable by the user when releasing helm
+These values are then used in the helm templates
+
+Templates
+Kubernetes resource definitions in the form of template files
+Templates help us to reuse the values from values.yaml file
+Templates uses golang templates https://golang.org/pkg/text/template/
+
+We can create these files for a new project by using the below command
+$ helm create <name>
+
+$ ls
+Dockerfile, chart, example-app, main.go
+
+$ helm install --name myrelease ./chart
+
+We can also use the --set flag to override any values from the values.yaml
+$ helm install --set image.tag=v1.0.0 --name myrelease ./chart
+
+We can also use helm to upgrade existing releases
+$ helm upgrade myrelease ./chart
+
+We can override values from values.yaml in helm upgrade using --set flag
+$ helm upgrade --set image.tag=v1.0.1 myrelease ./chart
+
+We can combine helm install and upgrade by using --install flag
+$ helm upgrade --install --set image.tag=v1.0.1 myrelease ./chart
+This command will upgrade the release, and create it if it does not exist already
+
+
 
