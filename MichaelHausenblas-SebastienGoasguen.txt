@@ -1,1 +1,59 @@
-Kubernetes Cookbook
+Kubernetes Cookbook:
+
+Deploymnet and Service from CLI:
+
+$ kubectl run ghost --image=ghost:0.9
+$ kubectl expose deployments ghost --port=2368 --type=NodePort
+
+
+Get multiple Kubernetes resources
+
+$ kubectl get pods,rs,deployments
+
+
+Installing kubeadm:
+We need kubeadm installed on all the servers that will be part of our Kubernetes cluster.
+
+If using Ubuntu, on each of the hosts run the following commands as root to setup Kubernetes package repository
+
+# apt-get update && apt-get install -y apt-transport-https
+
+# curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+
+# cat <<EOF >/etc/apt/sources.list.d/kubernetes.list
+  deb http://apt.kubernetes.io/ kubernetes-xenial main
+  EOF
+
+# apt-get update
+
+Now we can install Docker, kubeadm, kubectl, kubelet, and kubernetes-cni
+
+# apt-get install -y docker.io
+# apt-get install -y kubelet kubeadm kubectl kubernetes-cni
+
+Bootstrapping a Kubernetes Cluster using kubeadm
+
+On Master Node:
+# kubeadm init
+...
+...
+
+On other nodes:
+# kubeadm join --token <token>
+
+On Master Node:
+$ kubectl get nodes
+Here we will see our nodes join the cluster
+
+Final step is to create a network that satisfies Kubernetes Networking Requirements - single IP per Pod
+We can use any of the network add-ons, however Weave Net can be installed on Kubernetes v1.6.0 and above with a single command like below.
+
+$ export kubever=$(kubectl version | base64 | tr -d '\n')
+$ kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$kubever"
+
+This command will create daemonset running on all nodes in the cluster.
+Pods of the daemonset use the host network and a CNI plug-in to configure the local node network.
+
+Our nodes will enter READY state once the network is in place.
+
+Continue from: Chapter 2. Creating a Kubernetes Cluster
