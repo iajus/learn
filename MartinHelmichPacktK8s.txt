@@ -904,4 +904,6 @@ $ helm upgrade --install --set image.tag=v1.0.1 myrelease ./chart
 This command will upgrade the release, and create it if it does not exist already
 
 
+Using Helm in CI:
+helm upgrade --install --set image.tag=${CI_COMMIT_TAG} ${CI_PROJECT_NAME} ./chart
 
