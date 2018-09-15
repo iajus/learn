@@ -290,3 +290,81 @@ e.g. kubectl replace -f my-deployment.yaml
 kubeclt patch: Used to update a specific key in the deployment
 e.g. kubectl patch deployments mydep -p '{"spec": {"template": {"spec": {"containers": [{"name": "mydep", "image": "myimage:1.5"}]}}}}'
 
+
+Working with Services:
+
+Creating a Service to expose our application:
+$ kubectl expose deploy/nginx --port 80
+service "nginx" exposed
+
+$ kubectl describe svc/nginx
+
+$ kubectl get svc | grep nginx
+
+$ kubectl proxy
+Starting to serve on 127.0.0.1:8001
+
+Browse to http://localhost:8001/api/v1/proxy/namespaces/default/service/nginx
+
+$ cat nginx-svc.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+spec:
+  selector:
+    run: nginx
+  ports:
+  - port: 80
+
+One thig to pay attention in this YAML file is the "selector"
+"selector" is used to select the Pods that make up the microservice abstraction.
+Service object dynamically configures "iptables" on all nodes to be able to send traffic to containers that make up the microservice.
+
+$ kubectl get endpoints
+
+Verify the DNS entry of a Service:
+By default Kubernetes uses ClusterIP as the Service type, and that exposes the Service on a cluster-internal IP.
+If DNS cluster add-on is available and working properly, then we can access the service via a Fully Qualified Domain Name (FQDN)
+FQDN is in the form of <Service-Name>.<Namespace>.svc.cluster.local.
+
+To verify the DNS entry of a Service, we can do the below.
+$ kubectl run busybox --image busybox -it -- /bin/sh
+# nslookup nginx
+Server:    10.96.0.10
+Address 1: 10.96.0.10 kube-dns.kube-system.svc.cluster.local
+
+Name:      nginx
+Address 1: 10.109.24.56 nginx.default.svc.cluster.local
+
+NOTE: Here the IP address returned for the Service should correspond to its ClusterIP
+
+Changing the Type of a Service:
+$ cat nginx-svc.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: webserver
+spec:
+  ports:
+  - port: 80
+  selector:
+    app: nginx
+
+$ kubectl create -f nginx-svc.yaml
+
+$ kubectl get svc/webserver
+NAME       CLUSTER-IP  EXTERNAL-IP  PORT(S)  AGE
+webserver  10.0.0.39   <none>       80/TCP   56s
+
+$ kubectl get svc/webserver -o yaml
+
+Let's change the Service Type to NodePort:
+
+$ kubectl edit svc/webserver
+Change "type:" value to NodePort and containerPort: to nodePort:
+
+$ kubectl get svc/webserver
+
+$ kubectl get svc/webserver -o yaml
+
