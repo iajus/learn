@@ -486,4 +486,77 @@ kube-system namespace is reserved for administrators.
 kube-public namespace is meant to store public objects available to all users of the cluster.
 
 
-Setting Quotas Within a Namespace:
+Setting Quotas Within a Namespace (ResourceQuota):
+
+$ cat resource-quota-pods.yaml
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: mypodquota
+spec:
+  hard:
+    pods: "10"
+
+$ kubectl create namespace my-app
+
+$ kubectl create -f resource-quota-pods.yaml --namespace=my-app
+
+$ kubectl describe resourcequota mypodquota --namespace=mu-app
+
+We can set a number of Quotas on a per-namespace basis, including but not limited to Pods, Secrets, and ConfigMaps
+
+https://kubernetes.io/docs/tasks/administer-cluster/quota-api-object/
+https://kubernetes.io/docs/tasks/administer-cluster/manage-resources/quota-memory-cpu-namespace/
+
+
+Labeling an Object:
+$ kubectl label pods mypods tier=frontend
+
+$ kubectl label --help
+kubectl label command can be used to REMOVE labels, OVERWRITE existing laels, and even LABEL ALL RESOURCES in a namespace
+
+Using Labels for Queries:
+$ kubectl get pods --show-labels
+
+$ kubectl get pods --selector app=myapp
+
+-l is the short form of --selector
+
+$ kubectl get pods -l app=myapp
+
+Labels are used by Kubernetes for Pod selection by Deployments and Services
+
+We can also define labels in an object manifest like below...
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: foobar
+  labels:
+    tire: frontend
+    env: development
+    app: ui
+
+Set-Based querying:
+Many Object kinds support query in the form of "must be labelled with X and/or Y"
+Example:
+kubectl get pods -l 'env in (production, development)'
+This would give Pods that are either in the production or development environment
+
+-L will add a column to the results returned with the value of the specified label.
+
+$ kubectl get pods -Lapp
+NAME                   READY   ...   APP
+barfoo-7681199-h3gwx   1/1     ...   barfoo
+foobar-1123601-6x9w1   1/1     ...   foobar
+
+https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/
+
+
+Annotating a Resource with kubectl:
+
+$ kubectl annotate pods foobar description='something that we can use for automation"
+
+$ kubectl annotate deployment foobar kubernetes.io/change-cause="Reason for creating a new version"
+
+Continue from Chapter 7
