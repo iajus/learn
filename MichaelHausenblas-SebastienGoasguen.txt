@@ -56,4 +56,23 @@ Pods of the daemonset use the host network and a CNI plug-in to configure the lo
 
 Our nodes will enter READY state once the network is in place.
 
-Continue from: Chapter 2. Creating a Kubernetes Cluster
+
+Writing systemd Unit File to Run Kubernetes Components:
+
+If we look closely at the kubeadm configuration,
+we will see that kubelet running on every node in our cluster, including the master node is managed by systemd
+
+Log in to any of the nodes in the cluster we built using kubeadm
+
+# systemctl status kubelet
+kubelet.service - kubelet: The Kubernetes Node Agent
+ Loaded: loaded (/lib/systemd/system/kubelet.service; enabled; vendor present: enabled)
+Drop-In: /etc/systemd/system/kubelet.service.d
+         \__10-kubeadm.conf
+...
+...
+
+This gives us a link to the systemd unit file: /lib/systemd/system/kubelet.service
+And its configuration in /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+
+
