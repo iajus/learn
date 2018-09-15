@@ -75,4 +75,12 @@ Drop-In: /etc/systemd/system/kubelet.service.d
 This gives us a link to the systemd unit file: /lib/systemd/system/kubelet.service
 And its configuration in /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
 
+The unit file points to kubelet binary installed at /usr/bin/kubelet
+The configuration file has information on how the kubelet binary should be started
+
+All the options specified in the configuration file, such as --kubeconfig, defined by environment variable $KUBELET_CONFIG_ARGS,
+are startup options of the kubelet binary
+
+Kubelet Reference:
+https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/
 
