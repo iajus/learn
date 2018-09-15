@@ -167,5 +167,93 @@ HEPTIO PROTIP: https://blog.heptio.com/tagged/heptioprotip
 Creating and Modifying Fundamental Workloads:
 
 Creating a Deployment Using kubectl run:
+$ kubectl run ghost --image=ghost:0.9
+
+$ kubectl get deploy/ghost
+
+kubectl run command takes a number of argumensts to configure additional parameters of the deployment.
+
+--env Set environment variables
+--port Define container ports
+--command Define a command to run using
+--expose Automatically create an associated service
+--replicas Define the number of pods
+
+$ kubectl run ghost --image=ghost:0.9 --port=2368 --expose
+
+$ kubectl run mysql --image=mysql:5.5 --env=MYSQL_ROOT_PASSWORD=root
+
+$ kubectl run myshell --image=busybox --comman -- sh -c "sleep 3600"
+
+$ kubectl run --help
+
+Creating Objects from Manifest files:
+
+$ cat myns.yaml
+apiVersion: v1
+kind: namespace
+metadata:
+  name: myns
+
+$ kubectl create -f myns.yaml
+
+We can also point kubectl create to a URL instead of a file.
+
+$ kubectl create -f https://path/to/manifest/file
+
+
+Pod Manifest:
+Pod is an /api/v1 obect, Pod manifest contains the following fields
+
+> apiVersion : Specifies the API version
+> kind : indicates the type of the object
+> metadat : provides some metadata about the object
+> spec : provides the object specification
+
+A Pod can contain multiple containers as in the below example.
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: oreilly
+spec:
+  containers:
+  - name: oreilly
+    image: nginx
+  - name: safari
+    image: redis
+
+
+Deployment from a Manifest file:
+
+$ cat fancyapp.yaml
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: fancyapp
+spec:
+  replicas: 5
+  template:
+    metadata:
+      labels:
+        app: fancyapp
+        env: development
+    spec:
+      containers:
+      - name: sise
+        image: mhausenblas/simpleservice:0.5.0
+        ports:
+        - containerPort: 9876
+        env:
+        - name: SIMPLE_SERVICE_VERSION
+          value: "0.9"
+
+$ kubectl create -f fancyapp.yaml
+
+$ kubectl get deploy
+
+$ kubectl get rs
+
+$ kubectl get po
 
 
