@@ -256,4 +256,37 @@ $ kubectl get rs
 
 $ kubectl get po
 
+Generating manifest file with kubectl create:
+
+$ kubectl create deployment fancyapp --image nginx -o yaml --dry-run
+
+
+Updating Deployment:
+
+$ kubectl run my-deployment --image=mhausenblas/simpleservice:0.4.0
+deployment "my-deployment" created
+
+$ kubectl set image deployment my-deployment mhausenblas/simpleservice:0.5.0
+deployment "my-deployment" image updated
+
+$ kubectl rollout status deployment my-deployment
+deployment "my-deployment" successfully rolled out
+
+$ kubectl rollout history deployment my-deployment
+
+$ kubectl rollout undo deployment my-deployment --to-rivision=2
+
+kubectl create with --record flang will record events that trigger a revision.
+------------------------------------------------------------------------------
+
+Apply, Patch, and Replace:
+
+kubectl apply : Used to update a deployment from a manifest file or create the deployment if it doesn't exist
+e.g. kubectl apply -f my-deployment.yaml
+
+kubectl replace : Used to replace an existing deployment from a manifest file.
+e.g. kubectl replace -f my-deployment.yaml
+
+kubeclt patch: Used to update a specific key in the deployment
+e.g. kubectl patch deployments mydep -p '{"spec": {"template": {"spec": {"containers": [{"name": "mydep", "image": "myimage:1.5"}]}}}}'
 
