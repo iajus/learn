@@ -84,3 +84,88 @@ are startup options of the kubelet binary
 Kubelet Reference:
 https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/
 
+--pod-manifest-path=/etc/kubernetes/manifests path defined by environment variable $KUBELET_SYSTEM_PODS_ARG
+is the path where kubelet will look for manifests that it will automatically start.
+
+# ls /etc/kubernetes/manifests
+etcd.yaml, kube-apiserver.yaml, kube-controller-manager.yaml, kube-scheduler.yaml
+
+
+Using Kubernetes Client:
+
+Listing Resources:
+
+$ kubectl get pods
+
+$ kubectl get deployments,services
+
+$ kubectl get deployment my-deployment
+
+$ kubectl get all
+
+Resource Short Names:
+configmaps : cm
+daemonsets : ds
+deployments : deploy
+endpoints : ep
+events : ev
+horizontalpodautoscaler : hpa
+ingresses : ing
+namespaces : ns
+nodes : no
+pods : po
+persistentvolumes : pv
+persistentvolumeclaims : pvc
+replicasets : rs
+replicationcontrollers : rc
+resourcequotas : quota
+serviceaccounts : sa
+services : svc
+
+Deleting Resources:
+
+Delete all resources in a namespace:
+$ kubectl get ns
+...
+my-app   Active   20m
+
+$ kubectl delete ns my-app
+namespace "my-app" deleted
+
+Delete resources labeled with app=my-app
+$ kubectl delete svc,deploy -l app=my-app
+
+Force delete a pod:
+$ kubectl delete pod hangingpod --grace-period=0 --force
+
+Delete all pods in a namespace
+$ kubectl delete pods --all --namespace test
+
+Watch changes to Kubernetes objects in an interactive manner:
+$ kubectl get pods --watch
+
+alternatively we can use the watch command like below..
+$ watch kubectl get pods
+
+Editing Resources with kubectl
+$ kubectl run nginx --image=nginx
+$ kubectl edit deploy/nginx
+...
+deployment "nginx" edited
+NOTE: NOT ALL CHANGES TRIGGER A DEPLOYMENT
+
+Explain resources and Fields:
+$ kubectl explain svc
+
+$ kubectl explain svc.spec.externalIPs
+
+KUBECTL EXPLAIN: https://blog.heptio.com/kubectl-explain-heptioprotip-ee883992a243
+
+HEPTIO PROTIP: https://blog.heptio.com/tagged/heptioprotip
+
+
+Creating and Modifying Fundamental Workloads:
+
+Creating a Deployment Using kubectl run:
+
+
