@@ -368,3 +368,122 @@ $ kubectl get svc/webserver
 
 $ kubectl get svc/webserver -o yaml
 
+
+Making Sevices Accessible from Outside the Cluster (Ingress Resource):
+
+$ cat ingress-nginx.yaml
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: nginx-public
+  annotations:
+    ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host:
+    http:
+      paths:
+      - path: /web
+        backend:
+          serviceName: nginx
+          servicePort: 80
+
+$ kubectl create -f ingress-nginx.yaml
+
+$ kubectl get ingress
+
+$ curl -k https://<Ingress IP>/web
+
+Kubernetes Services and Ingress Under X-ray: http://containerops.org/2017/01/30/kubernetes-services-and-ingress-under-x-ray/
+
+
+
+Exploring Kubernetes API and Key Metadata:
+
+$ kubectl proxy --port=80 --api-prefix=/
+
+$ curl localhost/api/v1
+...
+{
+    "name": "pods",
+    "namespaced": true,
+    "kind": "Pod",
+    "verbs": [
+      "create",
+      "delete",
+      "deletecollection",
+      "get",
+      "list",
+      "patch",
+      "proxy",
+      "update",
+      "watch"
+    ],
+    "shortNames": [
+      "po"
+    ]
+},
+...
+
+When discovering the API endpoints, we will see different ones like...
+
+/api/v1
+
+/apis/apps
+
+/apis/authentication.k8s.io
+
+/apis/authorization.k8s.io
+
+/apis/autoscaling
+
+/apis/batch
+
+Each of these endpoints correspond to an API group.
+Within a group, API objects are versioned to indicate the maturity of the objects (e.g. v1beta1, v1beta2)
+
+Example:
+Pods, Services, ConfigMaps, and Secrets are part of /api/v1 API group
+Deployments are part of /apis/extensions/v1beta1 API group
+
+Understanding the Structure of a Kubernetes Manifest:
+
+>All API resources are either Objects or Lists
+>All resources have a kind, and an apiVersion
+>Every Object kind must have metadata.
+>The metadata contains the name of the Object, the namespace the Object is in
+>The metadata might also additionaly contain some labels and annotations
+>To complete a manifest, most Objects will have a spec
+>Once an Object is created, it will also return a status
+
+
+Namespaces to avoid Name Collision:
+
+$ kubectl create namespace my-app
+
+$ kubectl get ns
+
+$ cat ns.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: my-app
+
+$ kubectl create -f ns.yaml
+
+$ kubectl run foobar --image=ghost:0.9
+deployment "foobar" created
+
+$ kubectl run foobar --image=ghost:1.13
+Error from server (AlreadyExists): deployments.extensions "foobar" already exists
+
+$ kubectl run foobar --image=ghost:1.13 --namespace foobar
+deployment "foobar" created
+
+NOTE: API Objects in Kubernetes are Namespaced
+
+kube-system namespace is reserved for administrators.
+kube-public namespace is meant to store public objects available to all users of the cluster.
+
+
+Setting Quotas Within a Namespace:
