@@ -907,3 +907,28 @@ $ kubectl exec ppconsumer -i -t -- sh
 # cat /tmp/access/passphrase
 open sesame
 
+> Secrets exist in the context of a namespace, se we need to take that in to account when setting up and consuming secrets.
+> Secrets can be accessed either as Volumes or Environment Variables from within a Pod
+> Size of a Secret is limited to 1 MB
+
+"kubectl create seret" deals with three types of secrets
+1. "generic" type secret: creates a secret from a local file, directory or literal value
+2. "docker-registry" type secret: for use with a Docker registry
+3. "tls" type secret: To create SSL certificates
+
+"kubectl describe" doesn't show the content of a Secret in plain text.
+
+Decoding a Secret
+$ kubectl get secret pp -o yaml | grep passphrase | cut -d":" -f 2 | aws '{$1=$1};1' | base64 --decode
+
+> "grep" pulls out the line "passphrase: b3BlbiBzZXNhbWU="
+> "cut" extracts the content of the passphrase
+> "awk" gets rid of the leading whitespace
+> "base64" turns it in to the original data
+
+NOTE:
+We can use the --experimental-encryption-provider-config option when launching kube-apiserver
+This is supported after v1.7, and this will encrypt the base64 encoded secret before storing it in etcd
+
+https://kubernetes.io/docs/concepts/configuration/secret/
+https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
