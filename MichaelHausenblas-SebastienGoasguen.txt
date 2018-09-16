@@ -763,5 +763,46 @@ https://kubernetes.io/docs/tutorials/stateful-application/basic-stateful-set/
 https://kubernetes.io/docs/tasks/run-application/run-replicated-stateful-application/
 
 
-Pod Startup Behavior:
-7.5
+Pod Startup Behavior (Init Containers):
+
+Sometimes our Pod depends on some other service being available in order to function properly.
+
+e.g. we want to launch an nginx web server that depends on a backend service to serve content.
+we have to make sure that the nginx pod only starts up once the backend service is up and running.
+
+$ kubectl run backend --image=mhausenblas/simpleservice:0.5.0
+deployment "backend" created
+
+$ kubectl expose deployment backend --port=80 --target-port=9876
+
+Below manifest makes sure that it starts up nginx only when the backend deployment serves data:
+
+$ cat nginx-init-container.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: webserver
+        image: nginx
+        ports:
+        - containerPort: 80
+      initContainers:
+      - name: checkbackend
+        image: busybox
+        command: ['sh', '-c', 'until nslookup backend.default.svc; do echo "waiting for backend to be ready"; sleep 3; done;
+                   echo "Backend is up, ready to launch web server"']
+
+$ kubectl create -f nginx-init-container.yaml
+deployment "nginx" created
+
+$ kubectl get po
+
+$ kubectl logs nginx-2101406530-jwghn -c checkbackend
