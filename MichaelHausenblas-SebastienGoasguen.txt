@@ -932,3 +932,64 @@ This is supported after v1.7, and this will encrypt the base64 encoded secret be
 
 https://kubernetes.io/docs/concepts/configuration/secret/
 https://kubernetes.io/docs/tasks/administer-cluster/encrypt-data/
+
+
+ConfigMaps : Providing Configuration Data to an Application:
+
+$ kubectl create configmap siseconfig --from-literal=siseversion=0.9
+configmap "siseconfig" created
+
+$ cat comfigmap-app.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: configmapapp
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: configmapapp
+    spec:
+      containers:
+      - name: sise
+        image: mhausenblas/simpleservice:0.5.0
+        ports:
+        - containerPort: 9876
+        env:
+        - name: SIMPLE_SERVICE_VERSION
+          valueFrom:
+            configMapKeyRef:
+              name: siseconfig
+              key: siseversion
+
+NOTE:
+Environment variables are populated at the Pod startup time.
+Any changes to the ConfigMap are not reflected in the Pod's Environment Variables
+
+$ cat multi-key-value-cm.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: special-config
+  namespace: default
+data:
+  SPECIAL_LEVEL: very
+  SPECIAL_TYPE: charming
+
+$ kubectl create -f multi-key-value-cm.yaml
+
+$ cat multi-key-value-cm-pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: dapi-test-pod
+spec:
+  containers:
+  - name: test-container
+    image: k8s.gcr.io/busybox
+    command: ["/bin/sh", "-c", "env"]
+    envFrom:
+    - configMapRef:
+        name: special-config
+  restartPolicy: Never
