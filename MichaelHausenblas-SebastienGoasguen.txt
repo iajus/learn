@@ -993,3 +993,45 @@ spec:
     - configMapRef:
         name: special-config
   restartPolicy: Never
+
+$ kubectl create -f multi-key-value-cm-pod.yaml
+
+https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/
+
+$ cat example.cfg
+debug: true
+home: ~/abc
+
+$ kubectl create configmap configexample --from-file=example.cfg
+
+$ cat configfile-pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: oreilly
+spec:
+  containers:
+  - image: busybox
+    command:
+      - sleep
+      - "3600"
+    volumeMounts:
+    - mountPath: /oreilly
+      name: orielly
+    name: busybox
+  volumes:
+  - name: orielly
+    configMap:
+      name: configexample
+
+$ kubectl create -f configfile-pod.yaml
+
+$ kubectl exec -it oreilly -- ls -l /oreilly
+total 0
+lrwxrwxrwx 1 root  root  18 Oct 18 19:36 example.cfg -> ..data/example.cfg
+
+$ kubectl exec -ti oreilly -- cat /oreilly/example.cfg
+debug: true
+home: ~/abc
+
+Continue from 8.4:
