@@ -806,3 +806,104 @@ deployment "nginx" created
 $ kubectl get po
 
 $ kubectl logs nginx-2101406530-jwghn -c checkbackend
+
+
+Volumes and Configuration Data:
+
+Volume is a directory accessible to all containers running in a Pod.
+Data in the Volume is preserved across restarts of individual containers in the Pod
+
+> Node-Local Volumes such as emptyDir and hostPath
+> Generic networked volumes, such as nfs, glusterfs, or cephfs
+> Cloud provider specific volumes, such as awsElasticBlockStore, azureDisk, or gcePersistentDisk
+> Special-purpose volumes, such as ConfigMaps, Secrets, or gitRepo
+
+$ cat emptydir-volume-example.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sharevol
+spec:
+  containers:
+  - name: c1
+    image: centos:7
+    command:
+      - "bin/bash"
+      - "-c"
+      - "sleep 10000"
+    volumeMounts:
+      - name: xchange
+        mountPath: "/tmp/xchange"
+  - name: c2
+    image: centos:7
+    command:
+      - "bin/bash"
+      - "-c"
+      - "sleep 10000"
+    volumeMounts:
+      - name: xchange
+        mountPath: "/tmp/data"
+  volumes:
+  - name: xchange
+    emptyDir: {}
+
+$ kubectl create -f emptydir-volume-example.yaml
+pod "sharevol" created
+
+$ kubectl exec sharevol -c c1 -i -t -- bash
+# mount | grep xchange
+/dev/vdal on /tmp/xchange type ext4 (rw,relatime,data=ordered)
+# echo 'some data' > /tmp/xchanging/data
+# exit
+
+$ kubectl exec sharevol -c c2 -i -t -- bash
+# mount | grep /tmp/data
+/dev/vdal on /tmp/data type ext4 (rw,relatime,data=ordered)
+# cat /tmp/data/data
+some data
+
+Local Volume is backed by the Node where the Pod is running.
+We will loose the Local Volume and all the data if the Node goes down.
+
+https://kubernetes.io/docs/concepts/storage/volumes/
+
+Secret as Volume:
+
+$ echo -n "open sesame" > ./passphrase
+
+$ kubectl create secret generic pp --from-file=./passphrase
+secret "pp" created
+
+$ kubectl describe secrets/pp
+
+$ cat pod-secret-as-volume.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ppconsumer
+spec:
+  containers:
+  - name: shell
+    image: busybox
+    command:
+      - "sh"
+      - "-c"
+      - "mount | grep access && sleep 3600"
+    volumeMounts:
+      - name: passphrase
+        mountPath: "/tmp/access"
+        readOnly: true
+  volumes:
+  - name: passphrase
+    secret:
+      secretName: pp
+
+$ kubectl create -f pod-secret-as-volume.yaml
+pod "ppconsumer" created
+
+$ kubectl log ppconsumer
+
+$ kubectl exec ppconsumer -i -t -- sh
+# cat /tmp/access/passphrase
+open sesame
+
