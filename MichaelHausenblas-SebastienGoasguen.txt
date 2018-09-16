@@ -673,4 +673,88 @@ $ kubectl get ds
 
 $ kubectl describe ds/fluentd
 
-Continue from 7.4
+
+Managing Stateful and Leader/Follower Apps:
+
+StatefulSet enables workloads with unique network names, graceful deployment/scaling/termination, and persistent storage.
+Below listed CockroachDB installation contains StatefilSet at its core.
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cockroachdb
+spec:
+  serviceName: "cockroachdb"
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: cockroachdb
+    spec:
+      initContainers:
+      - name: bootstrap
+        image: cockroachdb/cockroach-k8s-init:0.2
+        imagePullPolicy: ifNotPresent
+        args:
+        - "-on-start=/on-start.sh"
+        - "-service=cockroachdb"
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        volumeMounts:
+        - name: datadir
+          mountPath: "/cockroach/cockroach-data"
+      affinity:
+        podAntiAffinity:
+          preferedDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - cockroachdb
+              topologyKey: kubernetes.io/hostname
+      containers:
+      - name: cockroachdb
+        image: cockroachdb/cockroach:v1.0.3
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 26257
+          name: grpc
+        - containerPort: 8080
+          name: http
+        volumeMounts:
+        - name: datadir
+          mountPath: /cockroach/cockroach-data
+        command:
+          - "/bin/bash"
+          - "-ecx"
+          - |
+            if [ ! "$(hostname)" == "cockroachdb-0" ] || [ -e "/cockroach/cockroach-data/cluster_exists_marker" ]
+            then
+              CRARGS+=("--join" "cockroachdb-public")
+            fi
+            exec /cockroach/cockroach ${CRARGS[*]}
+      terminationGracePeriodSeconds: 60
+      volumes:
+      - name:  datadir
+        persistentVolumeClaim:
+          claimName: datadir
+  volumeClaimtemplates:
+  - metadata:
+      name: datadir
+      annotations:
+        volume.alpha.kubernetes.io/storage-class: anything
+    spec:
+      accessModes:
+        - "ReadWriteOnce"
+      resources:
+        requests:
+          storage: 1Gi
+
+https://github.com/kubernetes/examples/tree/master/staging/cockroachdb
+
