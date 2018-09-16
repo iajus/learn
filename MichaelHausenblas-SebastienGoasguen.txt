@@ -559,4 +559,74 @@ $ kubectl annotate pods foobar description='something that we can use for automa
 
 $ kubectl annotate deployment foobar kubernetes.io/change-cause="Reason for creating a new version"
 
-Continue from Chapter 7
+
+
+Managing Specialized Workloads:
+
+Running a Batch Job
+Job resource in Kubernetes is used to launch and supervise Pods that will carry out the batch process.
+Job resource launches Pods in Run-To-Completion, i.e. Pods terminate after they are done with the task
+
+$ cat counter-batch-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: counter
+spec:
+  template:
+    metadata:
+      name: counter
+    spec:
+      containers:
+      - name: counter
+        image: busybox
+        command:
+         - "sh"
+         - "-c"
+         - "for i in 1 2 3 ; do echo $i ; done"
+       restartPolicy: Never
+
+$ kubectl create -f counter-batch-job.yaml
+job "counter" created
+
+$ kubectl get jobs
+NAME    DESIRED    SUCCESSFUL   AGE
+counter 1          1            22s
+
+$ kubectl describe jobs/counter
+
+$ kubectl logs jobs/counter
+
+$ kubectl delete jobs/counter
+
+
+Running a Task on a Schedule:
+
+CronJob object is a derivative of the more generic Job object.
+schedule section of the spec follows the crontab format.
+template section describes the Pods that will run and the command that will get executed.
+
+$ cat cron-job.yaml
+apiVersion: batch/v2alpha1
+kind: CronJob
+metadata:
+  name: hourly-date
+spec:
+  schedule: "0 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: date
+            image: busybox
+            command:
+              - "sh"
+              - "-c"
+              - "date"
+          restartPolicy: OnFailure
+
+$ kubectl create -f cron-job.yaml
+
+Continue from 7.3
+
