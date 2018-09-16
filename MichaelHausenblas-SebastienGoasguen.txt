@@ -708,7 +708,7 @@ spec:
           mountPath: "/cockroach/cockroach-data"
       affinity:
         podAntiAffinity:
-          preferedDuringSchedulingIgnoredDuringExecution:
+          preferredDuringSchedulingIgnoredDuringExecution:
           - weight: 100
             podAffinityTerm:
               labelSelector:
@@ -758,3 +758,10 @@ spec:
 
 https://github.com/kubernetes/examples/tree/master/staging/cockroachdb
 
+https://kubernetes.io/docs/tutorials/stateful-application/basic-stateful-set/
+
+https://kubernetes.io/docs/tasks/run-application/run-replicated-stateful-application/
+
+
+Pod Startup Behavior:
+7.5
