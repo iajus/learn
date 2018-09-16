@@ -1034,4 +1034,99 @@ $ kubectl exec -ti oreilly -- cat /oreilly/example.cfg
 debug: true
 home: ~/abc
 
-Continue from 8.4:
+
+Persistent Volume with Minikube:
+
+$ hostpath-pv.yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: hostpathpv
+  labels:
+    type: local
+spec:
+  storageClassName: manual
+  capacity:
+    storage: 1Gi
+  accessModes:
+  - ReadWriteOnce
+  hostPath:
+    path: "/tmp/pvdata"
+
+$ minikube ssh
+
+$ mkdir /tmp/pvdata && echo 'This content is served from the Persistent Volume' > /tmp/pvdata/index.html
+
+$ cat /tmp/pvdata/index.html
+This content is served from the Persistent Volume
+
+$ exit
+
+$ kubectl create -f hostpath-pv.yaml
+persistentvolume "hostpathpv" created
+
+$ kubectl get pv/hostpathpv
+Here we should see the STATUS as Available
+
+$ kubectl describe pv/hostpathpv
+
+$ cat hostpath-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mypvc
+spec:
+  storageClassName: manual
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 200Mi
+
+$ kubectl create -f hostpath-pvc.yaml
+persistentvolumeclaim "mypvc" created
+
+$ kubectl get pv/hostpathpv
+Here we should see the STATUS as Bound
+
+$ cat pod-with-pv.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pod-with-pv
+spec:
+  replicas:
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: webserver
+        image: nginx
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - mountPath: "/usr/share/nginx/html"
+          name: webservercontent
+      volumes:
+      - name:
+        persistentVolumeClaim:
+          claimName: mypvc
+
+$ kubectl create -f pod-with-pv.yaml
+
+$ kubectl get pvc/mypvc
+Here we shoudl see STATUS as Bound
+
+$ curl -k -s https://192.168.99.100/web
+This content is served from the Persistent Volume
+
+PersistentVolumes are cluster-wide resources
+PersistentVolumeClaims are namespaced resources.
+
+https://kubernetes.io/docs/concepts/storage/persistent-volumes/
+
+https://kubernetes.io/docs/tasks/configure-pod-container/configure-persistent-volume-storage/
+
+Continue from 8.5
