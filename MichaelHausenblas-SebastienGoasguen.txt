@@ -1129,4 +1129,70 @@ https://kubernetes.io/docs/concepts/storage/persistent-volumes/
 
 https://kubernetes.io/docs/tasks/configure-pod-container/configure-persistent-volume-storage/
 
-Continue from 8.5
+
+Data Persistency on Minikube:
+
+$ cat data.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+
+On Minikube create this PVC and immediately see how a Persistent Volume is created to match this claim:
+
+$ kubectl create -f data.yaml
+
+$ kubectl get pvc
+We should see STATUS as Bound here
+
+$ kubectl get pv
+NAME                                      CAPACITY  ... ...
+pvc-da58c85c-e29a-11e7-ac0b-080027fcc0e7  1Gi       ... ...
+
+NOTE:
+Minikube is configured out of the box with a default storage class that defines a default Persistent Volume provisioner.
+i.e. when a Persistent Volume Claim is created, Kubernetes will dynamically create a matching Persistent Volume to fill that claim
+
+$ kubectl get storageclass
+NAME                PROVISIONER
+standard (default)  k8s.io/minikube-hostpath
+
+$ kubectl get storageclass standard -o yaml
+...
+
+$ kubectl get pv pvc-da58c85c-e29a-11e7-ac0b-080027fcc0e7 -o yaml
+
+
+$ cat mysql-pv.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: db
+spec:
+  containers:
+  - image: mysql:5.5
+    name: db
+    volumeMounts:
+    - mountPath: /var/lib/mysql
+      name: data
+    env:
+      - name: MYSQL_ROOT_PASSWORD
+        value: root
+  volumes:
+  - name: data
+    persistentVolumeClaim:
+      claimName: data
+
+$ kubectl create -f mysql-pv.yaml
+
+https://kubernetes.io/docs/concepts/storage/persistent-volumes/
+
+https://kubernetes.io/docs/concepts/storage/storage-classes/
+
+CONTINUE FROM: 8.6 Dynamically Provisioning Persistent Storage on GKE
