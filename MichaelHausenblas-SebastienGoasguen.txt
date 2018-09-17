@@ -1195,4 +1195,49 @@ https://kubernetes.io/docs/concepts/storage/persistent-volumes/
 
 https://kubernetes.io/docs/concepts/storage/storage-classes/
 
-CONTINUE FROM: 8.6 Dynamically Provisioning Persistent Storage on GKE
+
+Dynamically Provisioning Persistent Storage on GKE
+
+$ cat slow-storage.yaml
+apiVersion: storage.k8s.io/v1beta1
+kind: StorageClass
+metadata:
+  name: slow
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-standard
+
+$ kubectl create -f slow-storage.yaml
+This will create a StorageClass named "slow" which will provision standard disk like Persistent Disks
+
+$ cat fast-storage.yaml
+apiVersion: storage.k8s.io/v1beta1
+kind: StorageClass
+metadata:
+  name: fast
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-ssd
+
+$ kubectl create -f slow-storage.yaml
+This will create a StorageClass named "fast" which will provision SSD like Persistent Disks
+
+Users request dynamically provissioned storage by including a Storage Class in their PersistentVolumeClaim.
+In beta version, Storage Class is specified with volume.beta.kubernetes.io/stoarge-class annotation
+
+$ cat fast-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: claim1
+  annotations:
+    volume.beta.kubernetes.io/storage-class: fast
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 30Gi
+
+
+Continue From: Section 9
