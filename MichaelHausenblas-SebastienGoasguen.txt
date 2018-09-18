@@ -1292,3 +1292,109 @@ In a third terminal session, launch the load generator
 $ kubectl run -i -t loadgen --image=busybox /bin/sh
 # while true; do wget -q -O- http://appserver.default.svc.cluster.local; done
 
+https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/
+
+https://kubernetes.io/blog/2016/07/autoscaling-in-kubernetes/
+
+https://github.com/mhausenblas/k8s-autoscale
+https://github.com/mhausenblas/container-networking
+
+
+Security:
+
+Providing a Unique Identity for an Application:
+
+$ kubectl create serviceaccount myappsa
+serviceaccount "myappsa" created
+
+$ kubectl describe sa mypodsa
+Name: myappsa
+Namespace: default
+Labels: <none>
+Annotations: <none>
+
+Image pull secrets: <none>
+
+Mountable secrets: myappsa-token-rr6jc
+
+Tokens: myappsa-token-rr6jc
+
+$ kubectl describe secret myappsa-token-rr6jc
+
+$ cat mypod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp
+spec:
+  serviceAccountName: myappsa
+  containers:
+  - name: main
+    image: centos:7
+    command:
+      - "bin/bash"
+      - "-c"
+      - "sleep 10000"
+
+$ kubectl create -f mypod.yaml
+
+$ kubectl exec myapp -c main cat /var/run/secrets/kubernetes.io/serviceaccount/token
+eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..
+
+Serviceaccounts are namespaced resources
+
+$ kubectl get sa
+NAME         SECRETS   AGE
+default      1         90d
+myapp        1         19m
+prometheus   1         89d
+
+Notice the "default" service account.
+This is created automatically and will be assigned to Pods without any explicit service accounts
+
+https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/
+
+https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
+
+https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+
+https://kubernetes.io/docs/reference/access-authn-authz/authorization/
+
+
+Listing and Viewing Access Control Information:
+
+We can check if a certain action on a resource is allowed for a specific user.
+This is only possible when we use Role-Based Access Control as the authorization method
+
+$ kubectl auth can-i list pods --as=system:serviceaccount:sec:myappsa -n=sec
+Command to check if the "myappsa" Service Account has access to list Pods in "sec" namespace
+
+$ kubectl get roles -n=kube-system
+Command to list roles available in "kube-system" namespace
+
+$ kubectl get clusterroles -n=kube-system
+Command to list Cluster Roles available in "kube-system" namespace
+
+$ kubectl describe clusterroles/view -n=kube-system
+Describe the "view" Cluster Role in "kube-system" namespace
+
+RBAC Authorization:
+> An entity - that is, a group, user, or service account
+> A resource, such as Pod, Service, or Secret
+> A role, which defines rules for actions on a resource
+> A role binding, which applies a role to an entity
+
+Actions on a resource that a role uses in its rules (verbs):
+> get, list, watch
+> create
+> update/patch
+> delete
+
+Two types of Roles:
+> Cluster-Wide: Cluster Roles and their respective Cluster Role Bindings
+> Namespace-Wide: Roles and Role Binding
+
+https://kubernetes.io/docs/reference/access-authn-authz/rbac/
+
+
+10.3 Controlling Access to Resources:
