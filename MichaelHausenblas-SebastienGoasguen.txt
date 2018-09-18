@@ -1397,4 +1397,79 @@ Two types of Roles:
 https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 
 
-10.3 Controlling Access to Resources:
+Controlling Access to Resources:
+
+Let's assume that we want to restrict an app to only be able to view Pods.
+i.e. it can only list Pods, and get details about Pods
+
+$ kubectl create serviceaccount myappsa
+serviceaccount "myappsa" created
+
+$ cat pod-with-sa.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: myapp
+  namespace: sec
+spec:
+  serviceAccountName: myappsa
+  containers:
+  - name: main
+    image: centos:7
+    command:
+      - "bin/bash"
+      - "-c"
+      - "sleep 10000"
+
+Now we can define a Role "podreader" to give access only to read Pods
+
+$ cat pod-reader.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: podreader
+  namespace: sec
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+
+Now that we have the podreader Role, we have to apply it to Secrvice Account myappsa using a RoleBinding
+
+$ cat pod-reader-binding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: podreaderbinding
+  namespace: sec
+roleRef:
+  apiGroup: rbac.authorization.k8s.io/v1
+  kind: Role
+  name: podreader
+subjects:
+- kind: ServiceAccount
+  name: mypodsa
+  namespace: sec
+
+$ kubectl create -f pod-reader.yaml
+
+$ kubectl create -f pod-reader-binding.yaml
+
+$ kubectl create -f pod-with-sa.yaml
+
+
+We can also create Role and RoleBinding with kubectl as below.
+
+$ kubectl create role podreader --verb=get --verb=list --resource=pods -n=sec
+
+$ kubectl create rolebinding podreaderbinding --role=sec:podreader --serviceaccount=sec:myappsa --namespace=sec -n=sec
+
+NOTE:
+For cluster-wide access control, we should use ClusterRole and ClusterRoleBinding
+
+=> If you want to restrict access to a namespaced resource (like a Service or Pod) in a certain namespace, use Role and RoleBinding
+
+=> If you want to reuse a Role in a couple of namespaces, use a ClusterRole with a RoleBinding
+
+=> If you want to restrict access to cluster-wide resources such as nodes or to namespaced resources across all namespaces, use ClusterRole with a ClusterRoleBinding
+
+
