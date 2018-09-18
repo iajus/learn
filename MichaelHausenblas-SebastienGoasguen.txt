@@ -1473,3 +1473,4 @@ For cluster-wide access control, we should use ClusterRole and ClusterRoleBindin
 => If you want to restrict access to cluster-wide resources such as nodes or to namespaced resources across all namespaces, use ClusterRole with a ClusterRoleBinding
 
 
+10.4 Securing Pods:
