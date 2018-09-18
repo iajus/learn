@@ -1240,4 +1240,55 @@ spec:
       storage: 30Gi
 
 
-Continue From: Section 9
+
+Scaling:
+> Cluster Scaling
+> Horizontal Pod Autoscalers
+> Vertical Pod Autoscalers
+
+Manual Scaling with "kubectl scale" Command:
+
+$ kubectl get deployment myfancyapp
+NAME         DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+myfancyapp   5         5         5            5           9m
+
+$ kubectl scale deployment myfancyapp --replicas=3
+deployment "myfancyapp" scaled
+
+$ kubectl get deployment myfancyapp
+NAME         DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+myfancyapp   3         3         3            3           9m
+
+
+Automatically Resizing a Cluster in GKE:
+$ gcloud container clusters create --num-nodes=1 supersizeme
+
+$ gcloud container clusters get-credentials supersizeme --zone europe-west2-b --project k8s-cookbook
+
+Enabling Cluster Autoscaling:
+$ gcloud beta container clusters update supersizeme --enable-autoscaling --min-nodes=1 --max-nodes=3 \
+ --zone europe-west2-b --project k8s-cookbook
+
+Test Cluster Autoscaling:
+$ kubectl run ghost --image=ghost:0.9 --replicas=15
+
+https://cloud.google.com/kubernetes-engine/docs/concepts/cluster-autoscaler
+
+
+Horizontal Pod Autoscaler:
+$ kubectl run appserver --image=gcr.io/google_containers/hpa-example --requests=cpu=200m --expose --port=80
+service "appserver" created
+deployment "appserver" created
+
+$ kubectl autoscale deployment appserver --cpu-percent=40 --min=1 --max=5
+deployment "appserver" autoscaled
+
+$ kubectl get hpa -watch
+
+In a second terminal session keep watch on the deployment
+$ kubectl get deployment appserver --watch
+
+In a third terminal session, launch the load generator
+$ kubectl run -i -t loadgen --image=busybox /bin/sh
+# while true; do wget -q -O- http://appserver.default.svc.cluster.local; done
+
