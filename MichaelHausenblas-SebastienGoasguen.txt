@@ -1510,3 +1510,21 @@ securityContext: https://kubernetes.io/docs/tasks/configure-pod-container/securi
 PodSecurityPolicy: https://kubernetes.io/docs/concepts/policy/pod-security-policy/
 
 
+Pod Logs:
+
+$ kubectl logs --help | more
+
+$ kubectl get pods
+NAME                     ...   ...
+ghost-8449997474-kn86m   ...   ...
+
+$ kubectl logs -f ghost-8449997474-kn86m
+...
+...
+
+NOTE: If a Pod has multiple containers, we can get the logs of a specific container by specifying -c option
+
+$ kubectl logs <POD-NAME> -c <CONTAINER-NAME>
+
+
+11.2 Liveness Probe
