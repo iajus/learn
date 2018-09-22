@@ -1534,7 +1534,7 @@ With "Liveness Probe", kubelet restarts the Pod automatically if the probe fails
 Liveness Probe is part of the Pod specification added to the containers section.
 Each container in a Pod can have a Liveness Probe defined
 
-Three types of probe:
+Three types of Liveness or Readiness probes:
 1. Command that is executed inside the container
 2. HTTP request to a specific route served by a webserver inside the container
 3. More generic TCP probe
@@ -1572,5 +1572,17 @@ spec:
 https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/
 https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/
 
+Kubelet on each node uses the livenessProbe to determine when to restart a container.
+Liveness probes can help overcome ramp-up issues and deadlocks
+
+Service load balancing a set of Pods uses the readinessProbe to determine if a Pod is ready to receive traffic.
+If the Pod is not ready, it is excluded from the Service's pool of endpoints.
 
 
+Heapster for Monitoring Resources:
+
+$ kubectl top pods
+
+Heapster add-on has to be running on the cluster for the "kubectl top" command to work.
+
+CONTINUE FROM 11.5 Enabling Heapster
