@@ -1571,6 +1571,7 @@ spec:
 
 https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/
 https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/
+https://kubernetes.io/docs/concepts/workloads/pods/init-containers/
 
 Kubelet on each node uses the livenessProbe to determine when to restart a container.
 Liveness probes can help overcome ramp-up issues and deadlocks
@@ -1585,4 +1586,11 @@ $ kubectl top pods
 
 Heapster add-on has to be running on the cluster for the "kubectl top" command to work.
 
-CONTINUE FROM 11.5 Enabling Heapster
+$ minikube addons enable heapster
+
+Enabling the Heapster add-on creates two Pods in the kube-system namespace.
+One Pod running Heapster and another Pod running an InfluxDB time series database along with Grafana dashboard.
+
+$ kubectl top node
+
+$ kubectl top pods --all-namespaces
