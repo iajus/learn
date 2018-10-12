@@ -183,3 +183,45 @@ If we had two different versions of maven installed,
 then we can instruct the pipeline to use a specific version of maven by using the tools section
 
 
+Error, Options, and Retry:
+==========================
+
+pipeline {
+    agent any
+    stages {
+        stage('Build') {
+            options {
+                retry(3)
+            }
+            steps {
+                echo "Before error statement"
+                error "Error statement just got executed"
+                echo "After error statement"
+            }
+        }
+    }
+}
+
+This pipeline retries three times and aborts without printing "After error statement"
+
+pipeline {
+    agent any
+    stages {
+        stage('Build') {
+            options {
+                retry(3)
+            }
+            steps {
+                echo "Before setting current build to FAILURE"
+                script {
+                    currentBuild.result = 'FAILURE'
+                }
+                echo "After setting the current build to FAILURE"
+            }
+        }
+    }
+}
+
+This pipeline sets the current build to failure, and it does not retry
+Also this pipeline prints "After setting the current build to FAILURE"
+
