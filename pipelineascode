@@ -225,3 +225,129 @@ pipeline {
 This pipeline sets the current build to failure, and it does not retry
 Also this pipeline prints "After setting the current build to FAILURE"
 
+Options and Timeout:
+====================
+
+Steps in the Options directive are invoked before entering the agent, or checking any when conditions
+
+pipeline {
+    agent any
+    stages {
+        stage('Build') {
+            options {
+                timeout(time: 1, unit: 'SECONDS')
+            }
+            steps {
+                echo 'Hello World'
+                sleep 2
+            }
+        }
+    }
+}
+
+This pipeline timesout after printing Hello World
+
+Timestamp Console Output:
+=========================
+
+pipeline {
+    agent any
+    stages {
+        stage('Build') {
+            options {
+                timestamps()
+            }
+            steps {
+                echo "Hello World in Build"
+                echo "Hello World in Build Again"
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                echo "Hello World in Test"
+                echo "Hello World in Test Again"
+            }
+        }
+    }
+}
+
+Here we have the timestamps() option for the Build stage, but not for Test stage
+We will see the timestamp being prefixed before the console output of Build stage
+
+pipeline {
+    agent any
+    
+    options {
+        timestamps()
+    }
+    
+    stages {
+        stage('Build') {
+            steps {
+                echo "Hello World in Build"
+                echo "Hello World in Build Again"
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                echo "Hello World in Test"
+                echo "Hello World in Test Again"
+            }
+        }
+    }
+}
+
+Here we have moved the Options block to pipeline level, so we should see timestamps for output of all the stages
+
+skipDefaultCheckout:
+====================
+Skip checking out code from source control by default in the agent directive (stage level and pipeline level)
+
+This option prevents the checking out of source code from the repository automatically
+
+First: We will have to create a github credentials in jenkins
+
+Credentials -> System -> Global Credentials -> Add Credentials
+
+pipeline {
+    agent none
+  
+    stages {
+        stage('Build') {
+            agent any
+            options {
+                skipDefaultCheckout()
+            }
+          
+            steps {
+              echo "Hello World"
+            }
+        }
+    }
+}
+
+This pipeline will not checkout the source code from git repository
+
+If we set "agent any" at pipeline level, then the skipDefaultCheckout option at the stage level does not have any effect.
+
+
+pipeline {
+    agent any
+        options {
+            skipDefaultCheckout()
+        }
+  
+    stages {
+        stage('Build') {
+            agent any          
+            steps {
+              echo "Hello World"
+            }
+        }
+    }
+}
+
+Here the skipDefaultCheckout option is set at pipeline level, and will be enforced
+
