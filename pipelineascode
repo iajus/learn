@@ -155,3 +155,31 @@ pipeline{
 
 Here the timeout block is retried three times and the pipeline is aborted, echo never executes
 
+Tools:
+======
+A section in the pipeline defining tools to auto-install and put on the PATH
+This instruction is ignored if agent is specified as none
+We can add the tools section either under stage or directly under pipeline
+
+Tools refered to by the tools section should already be available in Global Tool Configuration
+Manage Jenkins => Global Tool Configuration
+
+pipeline {
+    agent any
+    
+    stages {
+        stage('Build') {
+            tools {
+                maven 'maven3_5_2'
+            }
+            steps {
+                sh 'mvn --version'
+            }
+        }
+    }
+}
+
+If we had two different versions of maven installed,
+then we can instruct the pipeline to use a specific version of maven by using the tools section
+
+
