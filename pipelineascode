@@ -3,6 +3,8 @@ Jenkins Pipeline as Code
 1. Declarative Pipeline
 2. Scripted Pipeline
 
+More about Pipeline Syntax: https://jenkins.io/doc/book/pipeline/syntax/
+
 Declarative Pipeline syntax alwasys starts with the keyword "pipeline"
 Scripted Pipeline syntax always starts with keyword "node"
 
@@ -83,5 +85,73 @@ pipeline{
     }
 }
 
-Here the "sleep" step in the above pipeline comes from "Workflow Basic Steps" plugin
+Here the "sleep" and "echo" steps in the above pipeline comes from "Workflow Basic Steps" plugin
+
+More about Workflow Basic Steps: https://jenkins.io/doc/pipeline/steps/workflow-basic-steps/
+
+
+Error, Retry and Timeout:
+
+"retry" and "timeout" only apply to a block of code
+"retry" and "timeout" can be used seperately or nested within each other as well.
+
+Like "sleep" and "echo", "retry" and "timeout" are also provided by "Workflow Basic Steps" plugin
+
+Retry:
+======
+
+pipeline{
+    agent any
+    stages{
+        stage('Build'){
+            steps{
+                retry(3) {
+                    echo "Before throwing error"
+                    error "error in retry"
+                }
+                echo "end of script"
+            }
+        }
+    }
+}
+
+Timeout:
+========
+
+pipeline{
+    agent any
+    stages{
+        stage('Build'){
+            steps{
+                timeout(time: 1, unit: 'SECONDS'){
+                    echo "Sleeping in timeout"
+                    sleep 2
+                }
+            }
+        }
+    }
+}
+
+Here the sleep will be aborted due to timeout
+
+Nested Retry and Timeout:
+=========================
+
+pipeline{
+    agent any
+    stages{
+        stage('Build'){
+            steps{
+                retry(3) {
+                    timeout(time: 1, unit: 'SECONDS'){
+                        sleep 2
+                    }
+                    echo "After timeout"
+                }
+            }
+        }
+    }
+}
+
+Here the timeout block is retried three times and the pipeline is aborted, echo never executes
 
