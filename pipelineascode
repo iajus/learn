@@ -1,0 +1,10 @@
+Jenkins Pipeline as Code
+
+1. Declarative Pipeline
+2. Scripted Pipeline
+
+Declarative Pipeline syntax alwasys starts with the keyword "pipeline"
+Scripted Pipeline syntax always starts with keyword "node"
+
+We can still use "script block" inside Declarative Pipeline
+
