@@ -8,3 +8,80 @@ Scripted Pipeline syntax always starts with keyword "node"
 
 We can still use "script block" inside Declarative Pipeline
 
+Simple Hello World pipeline:
+
+pipeline{
+    agent any
+    stages{
+        stage("Hello"){
+            steps{
+                echo "Hello World"
+            }
+        }
+    }
+}
+
+If we specify agent as "none" in the above pipeline example, then it will run on the Jenkins master
+
+If we have a Jenkins slave node named "Slave 1", then we can specify label to run the pipeline on that slave
+
+pipeline{
+    agent{
+        label "Slave 1"
+    }
+    stages{
+        stage("Hello"){
+            steps{
+                echo "Hello World"
+            }
+        }
+    }
+}
+
+This will run the pipeline on Jenkins slave named "Slave 1"
+
+
+Custom Workspace:
+We can specify a custom workspace for our pipeline by using customworkspace attribute of agent as in the below example...
+
+pipeline{
+    agent{
+        label "Slave 1"
+        customworkspace "/home/ec2-user/customworkspace"
+    }
+    stages{
+        stage("Hello"){
+            steps{
+                echo "Hello World"
+            }
+        }
+    }
+}
+
+
+Script Block:
+We can use script block to run groovy scripts inside out declarative pipeline as below...
+
+pipeline{
+    agent any
+    stages{
+        stage('Build'){
+            steps{
+                script{
+                    def name = "jesse"
+                    
+                    if(name == "jesse")
+                        println("Hi ${name}")
+                    else
+                        println("Hi human")
+                    
+                    sleep 2
+                    echo "end of script"
+                }
+            }
+        }
+    }
+}
+
+Here the "sleep" step in the above pipeline comes from "Workflow Basic Steps" plugin
+
