@@ -907,3 +907,54 @@ $ git push origin dev
 
 Now Raise a pull request:
 
+Pull request Title:
+===================
+
+pipeline {
+    agent any
+    
+    stages {
+        stage('Build') {
+            when {
+                changeRequest title:"when-pr"
+            }
+            steps {
+                echo "Hello world Pull Request"
+            }
+        }
+    }
+}
+
+$ git add -A .
+
+$ git commit -m "commit"
+
+$ git push origin dev
+
+Raise a Pull Request with title "pipeline-changeRequest"
+
+Build stage will be skipped in this case as the Pull Request Title does not match
+
+Build stage will get executed only if our Pull Request title is "when-pr"
+
+Changeset condition:
+====================
+Executes the stage only if the changeset of the commit meet a certain regular expression
+
+pipeline {
+    agent any
+    
+    stages {
+        stage('Build') {
+            when {
+                changeset glob: "*.js"
+            }
+            steps {
+                echo "Hello world Changeset JS"
+            }
+        }
+    }
+}
+
+In this case the Build stage gets executed only if any of the java script files change.
+
