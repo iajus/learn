@@ -958,3 +958,65 @@ pipeline {
 
 In this case the Build stage gets executed only if any of the java script files change.
 
+We can also specify case sensitivity of the changeset pattern using changeSensitive attribute like below
+
+when {
+    changeste glob: "*WORLD.js", caseSensitive: true
+}
+
+beforeAgent condition:
+======================
+
+By default, the when condition for a stage will be evaluated after entering the agent for that stage,
+However, this can be changed by specifying the beforeAgent option within the when block.
+If beforeAgent is set to true,
+the when condition will be evaluated first, and the agent will only be entered if the when condition evaluates to true
+
+pipeline {
+    agent none
+    
+    environment {
+        DEPLOY_TO='dev'
+    }
+    stages {
+        stage('Build') {
+            agent {
+                label "Slave 1"
+            }
+            when {
+                beforAgent false
+                environment name: 'DEPLOY_TO', value: 'production'
+            }
+            steps {
+                echo 'Building'
+            }
+        }
+    }
+}
+
+Here we will see "Running on Slave 1" and then "Stage 'Build' skipped" messages
+
+pipeline {
+    agent none
+    
+    environment {
+        DEPLOY_TO='dev'
+    }
+    stages {
+        stage('Build') {
+            agent {
+                label "Slave 1"
+            }
+            when {
+                beforAgent true
+                environment name: 'DEPLOY_TO', value: 'production'
+            }
+            steps {
+                echo 'Building'
+            }
+        }
+    }
+}
+
+Now we will see just "Stage 'Build' skipped" message
+
