@@ -351,3 +351,258 @@ pipeline {
 
 Here the skipDefaultCheckout option is set at pipeline level, and will be enforced
 
+Pipeline, Stages and Environment Variables:
+===========================================
+
+pipeline {
+    agent any
+    
+    environment {
+        name1 = "Jesse"
+        name2 = "Simon"
+    }
+    
+    stages {
+    
+        stage('Build') {
+        
+            environment {
+                name3 = "Jaimie"
+            }
+            
+            steps {
+                echo "name1 ${name1}"
+                echo "name2 ${name2}"
+                echo "name3 ${name3}"    
+            }
+        }
+    }
+}
+
+This pipeline prints all three names from the echo statement
+
+pipeline {
+    agent any
+    
+    environment {
+        name1 = "Jesse"
+        name2 = "Simon"
+    }
+    
+    stages {
+    
+        stage('Build') {
+        
+            environment {
+                name3 = "Jaimie"
+            }
+            
+            steps {
+                echo "name1 ${name1}"
+                echo "name2 ${name2}"
+                echo "name3 ${name3}"    
+            }
+            
+        }
+        
+         stage('Test') {
+            
+            steps {
+                echo "name1 ${name1}"
+                echo "name2 ${name2}"
+                echo "name3 ${name3}"    
+            }
+            
+        }
+    }
+}
+
+This pipeline will fail with the below exception as name3 is not available in Test stage
+groovy.lang.MissingPropertyException: No such property: name3 for class: groovy.lang.Binding
+
+pipeline {
+    agent any
+    
+    environment {
+        name1 = "Jesse"
+        name2 = "Simon"
+    }
+    
+    stages {
+    
+        stage('Build') {
+        
+            environment {
+                name2 = "Mike"
+                name3 = "Jaimie"
+            }
+            
+            steps {
+                echo "name1 ${name1}"
+                echo "name2 ${name2}"
+                echo "name3 ${name3}"    
+            }
+        }
+    }
+}
+
+Here name2 is printed as "Mike", environment variable at the stage level takes precedence over environment variable at pipeline level
+
+pipeline {
+    agent any
+    
+    environment {
+        name1 = "Jesse"
+        name2 = "Simon"
+    }
+    
+    stages {
+    
+        stage('Build') {
+        
+            environment {
+                name3 = "Jaimie"
+            }
+            
+            steps {
+                sh "printenv"
+            }
+        }
+    }
+}
+
+Here we have a sh "shell" step in Build stage from workflow durable task step plugin.
+https://jenkins.io/doc/pipeline/steps/workflow-durable-task-step/
+
+Here we are using printenv to print out the environment variables from the shell script
+We can see name1, name2, and name3 among the bunch of environment variables printed by printenv
+
+
+Credentials in Pipeline:
+========================
+
+Lets create few dummy credentials...
+
+Credentials => System => Global Credentials => Add credentials => Username with password
+=> Enter username and password and use "some_username_password" as ID
+
+Credentials => System => Global Credentials => Add credentials => Secret text
+=> Scope = Global, Secret = "mysecret" ID = some_secret
+
+pipeline {
+    agent any
+    
+    stages {
+    
+        stage('Build') {
+        
+            environment {
+                SOME_USERNAME_PASSWORD = credentials('some_username_password')
+                SOME_SECRET = credentials('some_secret')
+            }
+            
+            steps {
+                echo "SOME_USERNAME_PASSWORD ${SOME_USERNAME_PASSWORD}" // this is in the format of username:password
+                echo "SOME_USERNAME_PASSWORD_USR ${SOME_USERNAME_PASSWORD_USR}"
+                echo "SOME_USERNAME_PASSWORD_PSW ${SOME_USERNAME_PASSWORD_PSW}"
+                echo "SOME_SECRET ${SOME_SECRET}"
+            }
+        }
+    }
+}
+
+
+Pipeline Stage -> When:
+=======================
+
+pipeline {
+    agent any
+    
+    environment {
+        DEPLOY_TO='production'
+    }
+    
+    stages {
+        stage('Build') {
+            when {
+                environment name: 'DEPLOY_TO', value: 'production'
+            }
+            steps {
+                echo 'Deploying'
+            }
+        }
+    }
+}
+
+This pipeline prints out 'Deploying'
+
+pipeline {
+    agent any
+    
+    environment {
+        DEPLOY_TO='test'
+    }
+    
+    stages {
+        stage('Build') {
+            when {
+                environment name: 'DEPLOY_TO', value: 'production'
+            }
+            steps {
+                echo 'Deploying'
+            }
+        }
+    }
+}
+
+Stage 'Build' skipped due to when conditional
+
+
+When with equals:
+=================
+
+pipeline {
+    agent any
+    
+    environment {
+        some_name="jesse"
+    }
+    
+    stages {
+        stage('Build') {
+            when {
+                equals expected: "jesse", actual: somae_name
+            }
+            steps {
+                echo "${some_name}"
+            }
+        }
+    }
+}
+
+When with not:
+==============
+
+pipeline {
+    agent any
+    
+    environment {
+        some_name="john"
+    }
+    
+    stages {
+        stage('Build') {
+            when {
+                not {
+                    equals expected: "jesse", actual: somae_name
+                }
+            }
+            steps {
+                echo "${some_name}"
+            }
+        }
+    }
+}
+
+Here we have nested the equals conditional inside the not conditional
+
