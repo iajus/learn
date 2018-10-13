@@ -606,3 +606,304 @@ pipeline {
 
 Here we have nested the equals conditional inside the not conditional
 
+When with expression:
+=====================
+
+pipeline {
+    agent any
+    
+    environment {
+        version="1.0"
+    }
+    
+    stages {
+        stage('Build') {
+            when {
+                expression {
+                    version == "1.0"
+                }
+            }
+            steps {
+                echo "Building ${version}"
+            }
+        }
+    }
+}
+
+expression conditional takes a groovy expression and evaluates it.
+
+When with allOf:
+================
+
+pipeline {
+    agent any
+    
+    environment {
+        version="1.0"
+        some_name="jesse"
+    }
+    
+    stages {
+        stage('Build') {
+            when {
+                allOf {
+                    environment name: "version", value: "1.0"
+                    environment name: "some_name", value: "jesse"
+                }
+            }
+            steps {
+                echo "Building allOf ${version} and ${some_name}"
+            }
+        }
+    }
+}
+
+When with anyOf:
+================
+
+pipeline {
+    agent any
+    
+    environment {
+        version="2.0"
+        some_name="jesse"
+    }
+    
+    stages {
+        stage('Build') {
+            when {
+                anyOf {
+                    environment name: "version", value: "1.0"
+                    environment name: "some_name", value: "jesse"
+                }
+            }
+            steps {
+                echo "Building allOf ${version} and ${some_name}"
+            }
+        }
+    }
+}
+
+When with branch:
+=================
+
+Stage will execute only when the pipeline is building a certain branch
+
+We need a github repo with the below Jenkinsfile and two branches 'master' and 'dev' for this example.
+
+pipeline {
+    agent any
+  
+    stages {
+        stage('Build Master') {
+            when {
+                branch 'master'
+            }
+          
+            steps {
+                echo 'Building master'
+            }
+        }
+      
+        stage('Build Dev') {
+            when {
+                branch 'dev'
+            }
+            steps {
+                echo 'Building dev'
+            }
+        }
+    }
+}
+
+
+Here we will be creating a Multibranch pipeline job in jenkins
+
+When with buildingTag and tag
+=============================
+
+The buildingTag condition only allows a stage to execute when we are building from a tag
+
+The tag condition only allows a stage to execute when we are building from specific tag or a tag name that fits a particular pattern
+
+We need a github repo with the below Jenkinsfile and a single branch 'master'
+
+pipeline {
+    agent any
+    
+    stages {
+        stage('Build') {
+            when {
+                buildingTag()
+            }
+            steps {
+                echo "Hello world building tag"
+            }
+        }
+    }
+}
+
+We have to select Mutibranch pipeline job in jenkins
+
+In the 'Branch Source' section of Multibranch pipeline job configuration, we have to add a new behaviour 'Discover tags'
+
+Lets tag the master branch of the repo
+
+$ git tag 1.0
+
+$ git push origin --tags
+
+Go back to Jenkins job and click 'Scan Repository Now'
+
+
+pipeline {
+    agent any
+    
+    stages {
+        stage('Build') {
+            when {
+                tag "2.0"
+            }
+            steps {
+                echo "Hello world building tag"
+            }
+        }
+    }
+}
+
+Lets tag the master branch of the repo
+
+$ git tag 2.0
+
+$ git push origin --tags
+
+> delete the 1.0 tag
+$ git push origin :refs/tags/1.0
+
+> apply 1.0 tag again
+$ git tag -fa 1.0
+
+$ git push origin --tags
+
+Go back to Jenkins job and click 'Scan Repository Now'
+
+
+Using pattern in the tag condition:
+===================================
+
+pipeline {
+    agent any
+    
+    stages {
+        stage('Build') {
+            when {
+                tag "release-*"
+            }
+            steps {
+                echo "Hello world building tag"
+            }
+        }
+    }
+}
+
+$ git add -A .
+
+$ git commit -m "commit"
+
+$ git push origin master
+
+$ git tag release-to-prod
+
+$ git push origin --tags
+
+> delete the 2.0 tag
+$ git push origin :refs/tags/2.0
+
+> apply 2.0 tag again
+$ git tag -fa 2.0
+
+$ git push origin --tags
+
+Go back to jenkins and click "Scan Repository Now"
+
+We should see three tags in the Multibranch pipeline we created....
+
+If we build from tag 2.0 and release-to-prod, 'Build' stage will only be executed when building with tag 'release-to-prod'
+
+More Information at: https://jenkins.io/doc/book/pipeline/syntax/#when
+
+
+When with changelog:
+====================
+
+only allows build if the commit message from the commit conforms to a certain regular expression
+
+For this example we have a github repository with the below Jenkinsfile and a normal.txt
+
+pipeline {
+    agent any
+    
+    stages {
+        stage('Build') {
+            when {
+                changelog '.*some_text.*'
+            }
+            steps {
+                echo "Hello world changelog"
+            }
+        }
+    }
+}
+
+We will not modify the normal.txt, commit and add a commit message....
+
+$ gedit normal.txt
+
+$ git add -A .
+
+$ git commit -m "prefix some_text suffix"
+
+$ git push origin master
+
+When with ChangeRequest:
+========================
+
+The changeRequest condition only allows a stage to execute when it is a pull request.
+
+For this example we have a github repository with the below Jenkinsfile and a normal.txt
+
+pipeline {
+    agent any
+    
+    stages {
+        stage('Build') {
+            when {
+                changeRequest()
+            }
+            steps {
+                echo "Hello world Pull Request"
+            }
+        }
+    }
+}
+
+We will have to create a "Multibranch Pipeline" job for this example
+
+Now lets create a new branch, and then raise a pull request
+
+$ git fetch
+
+$ git checkout dev
+
+$ git pull
+
+$ gedit normal.txt
+
+$ git add -A .
+
+$ git commit -m "change"
+
+$ git push origin dev
+
+Now Raise a pull request:
+
