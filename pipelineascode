@@ -1123,3 +1123,188 @@ pipelins {
         }
     }
 }
+
+Post:
+=====
+The post section defines one or more additional steps that are run upon the completion of a Pipeline’s or stage’s run
+
+post can support any of of the following post-condition blocks:
+1. always
+2. changed
+3. fixed
+4. regression
+5. aborted
+6. failure
+7. success
+8. unstable
+9. cleanup
+
+Condition blocks allow the execution of steps inside each condition depending on the completion status of the Pipeline or stage.
+
+Post Pipeline:
+==============
+
+pipeline {
+    agent any
+    stages {
+        stage('Build') {
+            steps {
+                echo "building"
+                //error("Build Failed")
+            }
+        }
+    }
+    post {
+        success {
+            echo 'post -> success is called'
+        }
+        failure {
+            echo 'post -> failure is called'
+        }
+        always {
+            echo 'post -> always is called'
+        }
+    }
+}
+
+This pipeline will print out the below statements...
+
+post -> always is called
+
+post -> success is called
+
+If we uncomment the error statement, then we will get the below statements...
+
+post -> always is called
+
+post -> failure is called
+
+
+Changed:
+========
+
+pipeline {
+    agent any
+    stages {
+        stage('Build') {
+            steps {
+                echo "building"
+                //error("Build Failed")
+                //script {
+                //      currentBuild.result = 'UNSTABLE'
+                //}
+            }
+        }
+    }
+    post {
+        // Only runs if the current pipeline's or Stage's run has a different completion status from its previous run.
+        changed {
+            echo 'post -> changed is called'
+        }
+    }
+}
+
+currentBuild.result used in the script block is a Global Variable
+https://jenkins.io/doc/book/pipeline/getting-started/#global-variable-reference
+
+We can access the full list of Global Variables in Jenkins from...
+Jenkins -> Jobs -> <Pipeline Job> -> Pipeline Syntax -> Global Variable Reference
+
+
+Unstable and Fixed:
+===================
+
+pipeline {
+    agent any
+    stages {
+        stage('Build') {
+            steps {
+                echo "building"
+                //error("Build Failed")
+                script {
+                      currentBuild.result = 'UNSTABLE'
+                }
+            }
+        }
+    }
+    post {
+        // Only runs if the current pipeline's or Stage's run has a different completion status from its previous run.
+        changed {
+            echo 'post -> changed is called'
+        }
+        // Only runs if the current pipeline's or stage's run has an "unstable" status
+        // Unstable state is usually caused by test failures, code violations, etc..
+        unstable {
+            echo 'post -> unstable is called'
+        }
+        // Only runs if the current pipeline's or stage's run is success and the previous run failed or was unstable
+        fixed {
+            echo 'post -> fixed is called'
+        }
+    }
+}
+
+
+Regression:
+===========
+
+pipeline {
+    agent any
+    stages {
+        stage('Build') {
+            steps {
+                echo "building"
+                error("Build Failed")
+            }
+        }
+    }
+    post {
+        // Only runs if the current pipeline's or Stage's status is failure, unstable, or aborted and the previous run was successful
+        regression {
+            echo 'post -> regression is called'
+        }
+    }
+}
+
+
+Aborted:
+========
+
+pipeline {
+    agent any
+    stages {
+        stage('Build') {
+            steps {
+                echo "building"
+                script {
+                    currentBuild.result = 'ABORTED'
+                }
+            }
+        }
+    }
+    post {
+        // Only runs if the current pipeline's or Stage's run has an aborted status, usually due to the pipeline being manually aborted
+        aborted {
+            echo 'post -> aborted is called'
+        }
+    }
+}
+
+
+Cleanup:
+========
+Cleanup conditional block runs after every other post condition has been evaluated, regardless of the status of Pipeline or stage
+
+Order of execution of all the post conditional blocks....
+
+1.  always
+2. changed
+3. fixed
+4. regression
+5. aborted
+6. failure
+7. success
+8. unstable
+9. cleanup
+
+CONTINUE from 24. Pipeline > Options > BuildDiscarder
