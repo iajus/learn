@@ -19,3 +19,6 @@
 6. Kubernetes Cookbook, 2nd Edition : Ke-Jou Carol Hsu, Hui-Chuan Chloe Lee, Hideto Saito
 7. Kubernetes in Action : Marko Lukša
 
+----
+
+https://kubernetes.io/docs/reference/glossary
