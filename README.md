@@ -1,4 +1,4 @@
-# learn
+# Learning Path
 
 ----
 
